@@ -1,0 +1,8 @@
+# gitignore for HopperControl
+
+# intellij specific
+.idea/
+local.properties
+bin/
+target/
+*.log
