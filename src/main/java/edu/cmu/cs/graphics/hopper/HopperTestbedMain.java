@@ -24,7 +24,7 @@ public class HopperTestbedMain {
         //TestList.populateModel(model);
         model.addTest(new BipedHopperTest());
 
-        JFrame testbed = new org.jbox2d.testbed.framework.TestbedFrame(model, panel, TestbedController.UpdateBehavior.UPDATE_CALLED);
+        JFrame testbed = new TestbedFrame(model, panel, TestbedController.UpdateBehavior.UPDATE_CALLED);
         testbed.setVisible(true);
         testbed.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
