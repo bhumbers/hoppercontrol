@@ -19,6 +19,12 @@ public class HopperTestbedMain {
 //          + "Hopefully you're on a mac so the window isn't ugly as crap.");
         }
         TestbedModel model = new TestbedModel();
+
+        //Not fun, but the hopper avatar requires a *lot* of iterations/short timestep to converge
+        //Hoping this can be reduced by tweaking how we use joints, but not sure...
+        model.getSettings().getSetting(TestbedSettings.PositionIterations).value = 30;
+        model.getSettings().getSetting(TestbedSettings.VelocityIterations).value = 50;
+
         TestbedPanel panel = new TestPanelJ2D(model);
 
         //TestList.populateModel(model);
