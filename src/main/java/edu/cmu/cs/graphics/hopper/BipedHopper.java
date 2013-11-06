@@ -46,7 +46,8 @@ public class BipedHopper {
     Body m_hip;
     Body m_knee;
     Body m_foot;
-    boolean m_motorOn;
+
+    float m_desiredHipPitch = 0.0f;
 
     public BipedHopper() {
         m_inContact = false;
@@ -66,7 +67,6 @@ public class BipedHopper {
 
     public void init(World world) {
         m_offset.set(0.0f, 12.0f);
-        m_motorOn = true;
 
         // Chassis
         {
@@ -139,11 +139,8 @@ public class BipedHopper {
 
             jd.initialize(m_chassis, m_hip, m_offset);
             jd.collideConnected = false;
-//            jd.motorSpeed = 0;
-//            jd.maxMotorTorque = 400.0f;
-//            jd.enableMotor = true;
-            jd.enableLimit = true;
-            jd.lowerAngle = jd.upperAngle = 0.0f;
+//            jd.enableLimit = true;
+//            jd.lowerAngle = jd.upperAngle = 0.0f;
             m_hipJoint = (RevoluteJoint) world.createJoint(jd);
         }
 
@@ -198,7 +195,7 @@ public class BipedHopper {
                 Vec2 d = p2.sub(p1);
                 jd.length = d.length();
                 jd.dampingRatio = 0.0f;
-                jd.frequencyHz = 15.0f;
+                jd.frequencyHz = 5.0f;
                 m_hopSpring = (DistanceJoint) world.createJoint(jd);
             }
         }
@@ -230,12 +227,14 @@ public class BipedHopper {
             case FLIGHT:
                 //Retract the leg
                 m_thrustSpring.setLength(UPPER_LEG_DEFAULT_LENGTH);
+                servoLegPlacement();
                 break;
             case LOAD:
                 //TODO
                 break;
             case COMPRESS:
                 //TODO
+                servoHipPitch();
                 break;
             case THRUST:
                 //Add thrust back by pushing down on spring
@@ -246,6 +245,35 @@ public class BipedHopper {
                 //TODO
                 break;
         }
+    }
+
+    protected void servoHipPitch() {
+        float hipPitch = m_hipJoint.getJointAngle();
+        float hipSpeed = m_hipJoint.getJointSpeed();
+        float hipDelta = m_desiredHipPitch - hipPitch ;
+
+        //Servo gains
+        float propGain = 10.0f;
+        float dragGain = 20.0f;
+        final float BIG_NUMBER = Float.MAX_VALUE;
+
+        float hipTorque = Math.abs(-propGain*hipDelta - dragGain*hipSpeed);
+
+        //Hacky, but get joint to use our torque by setting our torque as max and forcing use of max torque
+        //by setting some arbitrarily large velocity in servo direction
+        m_hipJoint.enableMotor(true);
+        m_hipJoint.setMaxMotorTorque(hipTorque);
+        m_hipJoint.setMotorSpeed(hipDelta > 0 ? BIG_NUMBER : -BIG_NUMBER);
+    }
+
+    protected void servoLegPlacement() {
+        //TODO: Set leg position using hip based on desired landing location
+        //TODO: Set desired leg lengths while in flight
+
+        //Placeholder: Do nothing
+        m_hipJoint.enableMotor(false);
+        m_hipJoint.setMaxMotorTorque(0);
+        m_hipJoint.setMotorSpeed(0);
     }
 
 }
