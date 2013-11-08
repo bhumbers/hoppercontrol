@@ -17,6 +17,11 @@ public class BipedHopper {
         UNLOAD
     }
 
+    final int NUM_LEGS = 1;
+
+    private final float HIP_PROP_GAIN = 1.0f;
+    private final float HIP_DRAG_GAIN = 20.0f;
+
     private final Vec2 CHASSIS_SIZE = new Vec2(2f, 0.5f);
     private final float CHASSIS_DENSITY = 0.1f;
 
@@ -35,6 +40,10 @@ public class BipedHopper {
     protected float m_springVel;
     protected ControlState m_controlState;
     protected Vec2 m_bodyVel;
+    protected float m_bodyPitch;
+
+    protected float m_currSupportPeriod;             //running count of time length of current support period (or 0 if not in support)
+    protected float m_nextSupportPeriodEst;          //estimate of length of next period that active leg is touching ground
 
     //Joints (arrays where each index corresponds to one of the legs)
     protected RevoluteJoint m_hipJoint[];
@@ -49,20 +58,22 @@ public class BipedHopper {
     Body m_knee[];
     Body m_foot[];
 
-    float m_desiredHipPitch = 0.0f;
-    float m_flightTime = 0.0f;
+    protected float m_targetBodyVelX = 0.0f;
+    protected float m_desiredHipPitch = 0.0f;
 
-    int m_activeLegIdx;
-    int m_idleLegIdx;
-
-    final int NUM_LEGS = 2;
+    protected int m_activeLegIdx;
+    protected int m_idleLegIdx;
 
     public BipedHopper() {
         m_inContact = false;
         m_springVel = 0;
         m_controlState = ControlState.FLIGHT;
         m_bodyVel = new Vec2();
+        m_bodyPitch = 0.0f;
         m_activeLegIdx = 0; m_idleLegIdx = 1;
+
+        m_currSupportPeriod = 0.0f;
+        m_nextSupportPeriodEst = 1.0f; //TODO: What's a reasonable init value for this?
 
         m_hip = new Body[NUM_LEGS];
         m_knee = new Body[NUM_LEGS];
@@ -227,6 +238,7 @@ public class BipedHopper {
         //Update sensor values
         m_springVel = m_lowerLegJoint[m_activeLegIdx].getJointSpeed();
         m_bodyVel = m_chassis.getLinearVelocity();
+        m_bodyPitch = m_chassis.getAngle();
 
         //Check for control FSM transitions
         switch (m_controlState) {
@@ -244,6 +256,8 @@ public class BipedHopper {
                 //Switch to flight once we leave the ground
                 if (m_inContact == false) {
                     m_controlState = ControlState.FLIGHT;
+                    m_nextSupportPeriodEst = m_currSupportPeriod; //estimate next support from current
+                    m_currSupportPeriod = 0.0f;
                     swapActiveLeg();
                 }
                 break;
@@ -252,13 +266,7 @@ public class BipedHopper {
         //Run control logic based on FSM state
         switch (m_controlState) {
             case FLIGHT:
-                //Retract idle leg, lengthen active for landing
-                //(to make this gradual, use lerp on current value (hacky, but seems to work well))
-                float alpha = Math.min(1.0f, 6.0f * dt); //~0.1 for 60 Hz updates
-
-                m_thrustSpring[m_idleLegIdx].setLength(lerp(m_thrustSpring[m_idleLegIdx].getLength(), UPPER_LEG_DEFAULT_LENGTH - 2.0f, alpha));
-                m_thrustSpring[m_activeLegIdx].setLength(lerp(m_thrustSpring[m_activeLegIdx].getLength(), UPPER_LEG_DEFAULT_LENGTH + 0.3f, alpha));
-                servoLegPlacement();
+                servoLegPlacement(dt);
                 break;
             case LOAD:
                 //TODO
@@ -277,8 +285,12 @@ public class BipedHopper {
                 break;
         }
 
+        if (m_inContact)
+            m_currSupportPeriod += dt;
+
         //Idle hip is constantly servoed throughout control cycle
-        servoIdleHipPitch();
+        if (NUM_LEGS > 1)
+            servoIdleHipPitch();
     }
 
     protected void swapActiveLeg() {
@@ -290,60 +302,76 @@ public class BipedHopper {
     }
 
     protected void servoActiveHipPitch() {
-        float hipPitch = m_hipJoint[m_activeLegIdx].getJointAngle();
-        float hipSpeed = m_hipJoint[m_activeLegIdx].getJointSpeed();
-        float hipDelta = m_desiredHipPitch - hipPitch ;
-
-        //Servo gains
-        float propGain = 10.0f;
-        float dragGain = 20.0f;
-        final float BIG_NUMBER = Float.MAX_VALUE;
-
-        float hipTorque = Math.abs(-propGain*hipDelta - dragGain*hipSpeed);
-
-        //Hacky, but get joint to use our torque by setting our torque as max and forcing use of max torque
-        //by setting some arbitrarily large velocity in servo direction
-        m_hipJoint[m_activeLegIdx].enableMotor(true);
-        m_hipJoint[m_activeLegIdx].setMaxMotorTorque(hipTorque);
-        m_hipJoint[m_activeLegIdx].setMotorSpeed(hipDelta > 0 ? BIG_NUMBER : -BIG_NUMBER);
+        servoTowardAngle(m_hipJoint[m_activeLegIdx], m_desiredHipPitch, HIP_PROP_GAIN, HIP_DRAG_GAIN);
     }
 
     protected void servoIdleHipPitch() {
         //Mirror the active hip by servo-ing to negative of its pitch
         float activeHipPitch = m_hipJoint[m_activeLegIdx].getJointAngle();
         float targetIdleHipPitch = -activeHipPitch;
-
-        float hipPitch = m_hipJoint[m_idleLegIdx].getJointAngle();
-        float hipSpeed = m_hipJoint[m_idleLegIdx].getJointSpeed();
-        float hipDelta = targetIdleHipPitch - hipPitch;
-
-        //Servo gains
-        float propGain = 10.0f;
-        float dragGain = 20.0f;
-        final float BIG_NUMBER = Float.MAX_VALUE;
-
-        float hipTorque = Math.abs(-propGain*hipDelta - dragGain*hipSpeed);
-
-        //Hacky, but get joint to use our torque by setting our torque as max and forcing use of max torque
-        //by setting some arbitrarily large velocity in servo direction
-        m_hipJoint[m_idleLegIdx].enableMotor(true);
-        m_hipJoint[m_idleLegIdx].setMaxMotorTorque(hipTorque);
-        m_hipJoint[m_idleLegIdx].setMotorSpeed(hipDelta > 0 ? BIG_NUMBER : -BIG_NUMBER);
+        servoTowardAngle(m_hipJoint[m_idleLegIdx], targetIdleHipPitch, HIP_PROP_GAIN, HIP_DRAG_GAIN);
     }
 
-    protected void servoLegPlacement() {
-        //TODO: Set leg position using hip based on desired landing location
-        //TODO: Set desired leg lengths while in flight
+    protected void servoLegPlacement(float dt) {
+        /////// LENGTHS /////////////////////////////////////////////////////////////////////////////
+        //Retract idle leg, lengthen active for landing
+        //(to make this gradual, use lerp on current value (hacky, but seems to work well))
+        float alpha = Math.min(1.0f, 6.0f * dt); //~0.1 for 60 Hz updates
 
-        //Placeholder: Do nothing
-        m_hipJoint[m_activeLegIdx].enableMotor(false);
-        m_hipJoint[m_activeLegIdx].setMaxMotorTorque(0);
-        m_hipJoint[m_activeLegIdx].setMotorSpeed(0);
+        float idleLegTargetLength = UPPER_LEG_DEFAULT_LENGTH - 2.0f;
+        float activeLegTargetLength = UPPER_LEG_DEFAULT_LENGTH + 0.3f;
+
+        if (NUM_LEGS > 1)
+            m_thrustSpring[m_idleLegIdx].setLength(lerp(m_thrustSpring[m_idleLegIdx].getLength(), idleLegTargetLength, alpha));
+        m_thrustSpring[m_activeLegIdx].setLength(lerp(m_thrustSpring[m_activeLegIdx].getLength(), activeLegTargetLength, alpha));
+        /////////////////////////////////////////////////////////////////////////////////////////////
+
+        /////// ANGLE /////////////////////////////////////////////////////////////////////////////
+        //Set leg position using hip based on desired landing location
+        float deltaFromTargetVel = m_bodyVel.x - m_targetBodyVelX;
+        float targetVelGain = 0.5f;
+        float desiredLandingOffsetX = (0.5f * m_bodyVel.x * m_nextSupportPeriodEst) + (targetVelGain * deltaFromTargetVel);
+
+        //Bound to some reasonable range
+        float maxAllowedOffsetX = 0.5f * activeLegTargetLength;
+        if (desiredLandingOffsetX > maxAllowedOffsetX)
+            desiredLandingOffsetX = maxAllowedOffsetX;
+        if (desiredLandingOffsetX < -maxAllowedOffsetX)
+            desiredLandingOffsetX = -maxAllowedOffsetX;
+
+        float targetActiveHipAngle =  0.0f;
+        float eps = 0.000001f;
+        if (Math.abs(desiredLandingOffsetX) > eps)
+            targetActiveHipAngle = -m_bodyPitch;// + (float)(Math.asin(desiredLandingOffsetX/activeLegTargetLength));
+
+        if (Float.isNaN(targetActiveHipAngle)) {
+            targetActiveHipAngle = 0.0f;
+        }
+
+        servoTowardAngle(m_hipJoint[m_activeLegIdx], targetActiveHipAngle, HIP_PROP_GAIN, HIP_DRAG_GAIN);
+        /////////////////////////////////////////////////////////////////////////////////////////////
     }
 
     //Returns (1-alpha)*x + alpha*y
     protected float lerp(float x, float y, float alpha) {
         return (1-alpha)*x + alpha*y;
+    }
+
+    protected void servoTowardAngle(RevoluteJoint joint, float targetAngle, float propGain, float dragGain)     {
+        float jointAngle = joint.getJointAngle();
+        float jointSpeed = joint.getJointSpeed();
+        float targetJointDelta = targetAngle - jointAngle;
+
+        final float BIG_NUMBER = Float.MAX_VALUE;
+
+        float torque = propGain*targetJointDelta - dragGain*jointSpeed;
+
+        //Hacky, but get joint to use our torque by setting our torque as max and forcing use of max torque
+        //by setting some arbitrarily large velocity in servo direction
+        torque = Math.abs(torque);
+        m_hipJoint[m_activeLegIdx].enableMotor(true);
+        m_hipJoint[m_activeLegIdx].setMaxMotorTorque(torque);
+        m_hipJoint[m_activeLegIdx].setMotorSpeed(targetJointDelta > 0 ? BIG_NUMBER : -BIG_NUMBER);
     }
 
 }
