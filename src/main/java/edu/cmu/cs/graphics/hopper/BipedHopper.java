@@ -222,7 +222,8 @@ public class BipedHopper {
         }
     }
 
-    public void updateControl() {
+    /** Updates control & actuation for this hopper based on given simulation timestep dt (in seconds) */
+    public void updateControl(float dt) {
         //Update sensor values
         m_springVel = m_lowerLegJoint[m_activeLegIdx].getJointSpeed();
         m_bodyVel = m_chassis.getLinearVelocity();
@@ -253,7 +254,7 @@ public class BipedHopper {
             case FLIGHT:
                 //Retract idle leg, lengthen active for landing
                 //(to make this gradual, use lerp on current value (hacky, but seems to work well))
-                float alpha = 0.1f;
+                float alpha = Math.min(1.0f, 6.0f * dt); //~0.1 for 60 Hz updates
 
                 m_thrustSpring[m_idleLegIdx].setLength(lerp(m_thrustSpring[m_idleLegIdx].getLength(), UPPER_LEG_DEFAULT_LENGTH - 2.0f, alpha));
                 m_thrustSpring[m_activeLegIdx].setLength(lerp(m_thrustSpring[m_activeLegIdx].getLength(), UPPER_LEG_DEFAULT_LENGTH + 0.3f, alpha));

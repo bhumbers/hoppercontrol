@@ -130,7 +130,9 @@ public class BipedHopperTest extends TestbedTest {
             addTextLine("Control State: " + m_hopper.getControlState());
         }
 
-        m_hopper.updateControl();
+        float hz = settings.getSetting(TestbedSettings.Hz).value;
+        float timeStep = hz > 0f ? 1f / hz : 0;
+        m_hopper.updateControl(timeStep);
     }
 
     @Override
