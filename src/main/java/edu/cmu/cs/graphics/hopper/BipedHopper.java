@@ -6,6 +6,9 @@ import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.joints.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /** Holds body state and runs control logic for biped hopper avatar */
 public class BipedHopper {
 
@@ -19,47 +22,59 @@ public class BipedHopper {
 
     final int NUM_LEGS = 1;
 
-    private final float HIP_PROP_GAIN = 1.0f;
-    private final float HIP_DRAG_GAIN = 20.0f;
+    private final float HIP_PROP_GAIN = 20.0f;
+    private final float HIP_DRAG_GAIN = 5.0f;
+
+    private final float THRUST_SPRING_FREQUENCY = 50.0f; //Hz
+    private final float THRUST_SPRING_DAMPING_RATIO = 0.8f;
+    private final float HOP_SPRING_FREQUENCY = 20.0f; //Hz
+    private final float HOP_SPRING_DAMPING_RATIO = 0.2f;
 
     private final Vec2 CHASSIS_SIZE = new Vec2(2f, 0.5f);
-    private final float CHASSIS_DENSITY = 0.1f;
+    private final float CHASSIS_DENSITY = 1.0f;
 
     private final Vec2 HIP_SIZE = new Vec2(0.3f, 0.1f);
-    private final float HIP_DENSITY = 1.0f;
+    private final float HIP_DENSITY = CHASSIS_DENSITY * 1.0f;
     private final float UPPER_LEG_DEFAULT_LENGTH = 3.0f;
 
     private final Vec2 KNEE_SIZE = new Vec2(0.2f, 0.1f);
-    private final float KNEE_DENSITY = 1.0f;
+    private final float KNEE_DENSITY = CHASSIS_DENSITY * 0.1f;
     private final float LOWER_LEG_DEFAULT_LENGTH = 2.0f;
 
     private final float FOOT_RADIUS = 0.2f;
-    private final float FOOT_DENSITY = 1.0f;
+    private final float FOOT_DENSITY = CHASSIS_DENSITY * 0.1f;
 
-    protected boolean m_inContact;
-    protected float m_springVel;
-    protected ControlState m_controlState;
-    protected Vec2 m_bodyVel;
-    protected float m_bodyPitch;
+    public boolean m_inContact;
+    public float m_springVel;
+    public ControlState m_controlState;
+    public Vec2 m_bodyVel;
+    public float m_bodyPitch;
 
     protected float m_currSupportPeriod;             //running count of time length of current support period (or 0 if not in support)
     protected float m_nextSupportPeriodEst;          //estimate of length of next period that active leg is touching ground
 
     //Joints (arrays where each index corresponds to one of the legs)
-    protected RevoluteJoint m_hipJoint[];
-    protected PrismaticJoint m_upperLegJoint[];    //keeps hip & knee aligned along leg direction
-    protected DistanceJoint m_thrustSpring[];       //used to control leg length & excite lower leg spring during takeoff thrust
-    protected PrismaticJoint m_lowerLegJoint[];     //keeps knee & foot aligned along leg direction
-    protected DistanceJoint m_hopSpring[];          //stores & returns bounce energy for hopper
+    public RevoluteJoint m_hipJoint[];
+    public PrismaticJoint m_upperLegJoint[];    //keeps hip & knee aligned along leg direction
+    public DistanceJoint m_thrustSpring[];       //used to control leg length & excite lower leg spring during takeoff thrust
+    public PrismaticJoint m_lowerLegJoint[];     //keeps knee & foot aligned along leg direction
+    public DistanceJoint m_hopSpring[];          //stores & returns bounce energy for hopper
 
-    Vec2 m_offset = new Vec2();
-    Body m_chassis;
-    Body m_hip[];
-    Body m_knee[];
-    Body m_foot[];
+    protected Vec2 m_offset = new Vec2();
+    protected Body m_chassis;
+    protected Body m_hip[];
+    protected Body m_knee[];
+    protected Body m_foot[];
+    protected List<Body> m_bodies;
 
-    protected float m_targetBodyVelX = 0.0f;
-    protected float m_desiredHipPitch = 0.0f;
+    public float m_targetBodyVelX = 0.0f;
+    public float m_targetBodyPitch = 0.0f;          //target angle of main hopper body relative to ground
+    public float m_targetActiveHipAngle = 0.0f;     //target angle of active hip relative to body
+    public float m_targetdIdleHipAngle = 0.0f;       //target angle of idle hip relative to body
+
+    //Torques/forces on various joints (readablel; modified internally)
+    public float m_activeHipTorque = 0.0f;
+    public float m_idleHipTorque = 0.0f;
 
     protected int m_activeLegIdx;
     protected int m_idleLegIdx;
@@ -75,6 +90,7 @@ public class BipedHopper {
         m_currSupportPeriod = 0.0f;
         m_nextSupportPeriodEst = 1.0f; //TODO: What's a reasonable init value for this?
 
+        m_bodies = new ArrayList<Body>();
         m_hip = new Body[NUM_LEGS];
         m_knee = new Body[NUM_LEGS];
         m_foot = new Body[NUM_LEGS];
@@ -85,9 +101,14 @@ public class BipedHopper {
         m_hopSpring = new DistanceJoint[NUM_LEGS];
     }
 
+    /** Returns list of all bodies belonging to the hopper */
+    public List<Body> getBodies() {return m_bodies;}
+
+    /** Returns body which is considered the root of this hopper */
+    public Body getMainBody() {return m_chassis;}
+
     /** Returns body which should be monitored for contact with ground in order to update
-     * "inContact" flag
-     */
+     * "inContact" flag */
     public Body getGroundContactBody() {return m_foot[m_activeLegIdx];}
 
     public ControlState getControlState() {return m_controlState;}
@@ -112,6 +133,10 @@ public class BipedHopper {
             bd.position.set(m_offset);
             m_chassis = world.createBody(bd);
             m_chassis.createFixture(sd);
+            m_bodies.add(m_chassis);
+
+            float blah = m_chassis.getMass();
+            System.out.print(blah);
         }
 
         for (int i = 0; i < NUM_LEGS; i++) {
@@ -129,6 +154,7 @@ public class BipedHopper {
                 bd.position.set(m_offset);
                 m_hip[i] = world.createBody(bd);
                 m_hip[i].createFixture(sd);
+                m_bodies.add(m_hip[i]);
             }
 
 
@@ -146,6 +172,7 @@ public class BipedHopper {
                 bd.position.y =  m_hip[i].getPosition().y - UPPER_LEG_DEFAULT_LENGTH;   //offset along thigh
                 m_knee[i] = world.createBody(bd);
                 m_knee[i].createFixture(fd);
+                m_bodies.add(m_knee[i]);
             }
 
             //Foot
@@ -155,6 +182,7 @@ public class BipedHopper {
                 FixtureDef capFd = new FixtureDef();
                 capFd.density = FOOT_DENSITY;
                 capFd.shape = footShape;
+                capFd.friction = 1.0f; //high friction so we don't have to worry much about slipping
                 capFd.filter.groupIndex = -1;
 
                 BodyDef bd = new BodyDef();
@@ -162,6 +190,7 @@ public class BipedHopper {
                 bd.position.y =  m_knee[i].getPosition().y - LOWER_LEG_DEFAULT_LENGTH;   //offset to bottom of shin
                 m_foot[i] = world.createBody(bd);
                 m_foot[i].createFixture(capFd);
+                m_bodies.add(m_foot[i]);
             }
 
             //Rotary hip joint
@@ -194,8 +223,8 @@ public class BipedHopper {
                     Vec2 p2 = jd.bodyB.getWorldPoint(jd.localAnchorB);
                     Vec2 d = p2.sub(p1);
                     jd.length = d.length();
-                    jd.dampingRatio = 0.8f;
-                    jd.frequencyHz = 100;
+                    jd.frequencyHz = THRUST_SPRING_FREQUENCY;
+                    jd.dampingRatio = THRUST_SPRING_DAMPING_RATIO;
                     m_thrustSpring[i] = (DistanceJoint) world.createJoint(jd);
                 }
             }
@@ -225,8 +254,8 @@ public class BipedHopper {
                     Vec2 p2 = jd.bodyB.getWorldPoint(jd.localAnchorB);
                     Vec2 d = p2.sub(p1);
                     jd.length = d.length();
-                    jd.dampingRatio = 0.0f;
-                    jd.frequencyHz = 5.0f;
+                    jd.frequencyHz = HOP_SPRING_FREQUENCY;
+                    jd.dampingRatio = HOP_SPRING_DAMPING_RATIO;
                     m_hopSpring[i] = (DistanceJoint) world.createJoint(jd);
                 }
             }
@@ -273,9 +302,10 @@ public class BipedHopper {
                 break;
             case COMPRESS:
                 //TODO
-                servoActiveHipPitch();
+                servoBodyPitch();
                 break;
             case THRUST:
+                servoBodyPitch();
                 //Add thrust back by pushing down on spring
                 //TODO: Correct thrust for desired hop height
                 m_thrustSpring[m_activeLegIdx].setLength(UPPER_LEG_DEFAULT_LENGTH + 0.3f);
@@ -301,22 +331,22 @@ public class BipedHopper {
         }
     }
 
-    protected void servoActiveHipPitch() {
-        servoTowardAngle(m_hipJoint[m_activeLegIdx], m_desiredHipPitch, HIP_PROP_GAIN, HIP_DRAG_GAIN);
+    protected void servoBodyPitch() {
+        m_activeHipTorque = servoTowardAngle(m_hipJoint[m_activeLegIdx], m_targetBodyPitch, HIP_PROP_GAIN, HIP_DRAG_GAIN);
     }
 
     protected void servoIdleHipPitch() {
         //Mirror the active hip by servo-ing to negative of its pitch
         float activeHipPitch = m_hipJoint[m_activeLegIdx].getJointAngle();
-        float targetIdleHipPitch = -activeHipPitch;
-        servoTowardAngle(m_hipJoint[m_idleLegIdx], targetIdleHipPitch, HIP_PROP_GAIN, HIP_DRAG_GAIN);
+        m_targetdIdleHipAngle = -activeHipPitch;
+        m_idleHipTorque = servoTowardAngle(m_hipJoint[m_idleLegIdx], m_targetdIdleHipAngle, HIP_PROP_GAIN, HIP_DRAG_GAIN);
     }
 
     protected void servoLegPlacement(float dt) {
         /////// LENGTHS /////////////////////////////////////////////////////////////////////////////
         //Retract idle leg, lengthen active for landing
         //(to make this gradual, use lerp on current value (hacky, but seems to work well))
-        float alpha = Math.min(1.0f, 6.0f * dt); //~0.1 for 60 Hz updates
+        float alpha = Math.min(1.0f, 1.0f * dt);
 
         float idleLegTargetLength = UPPER_LEG_DEFAULT_LENGTH - 2.0f;
         float activeLegTargetLength = UPPER_LEG_DEFAULT_LENGTH + 0.3f;
@@ -339,16 +369,15 @@ public class BipedHopper {
         if (desiredLandingOffsetX < -maxAllowedOffsetX)
             desiredLandingOffsetX = -maxAllowedOffsetX;
 
-        float targetActiveHipAngle =  0.0f;
+        m_targetActiveHipAngle =  0.0f;
         float eps = 0.000001f;
         if (Math.abs(desiredLandingOffsetX) > eps)
-            targetActiveHipAngle = -m_bodyPitch;// + (float)(Math.asin(desiredLandingOffsetX/activeLegTargetLength));
+            m_targetActiveHipAngle = -m_bodyPitch + (float)(Math.asin(desiredLandingOffsetX/activeLegTargetLength));
 
-        if (Float.isNaN(targetActiveHipAngle)) {
-            targetActiveHipAngle = 0.0f;
-        }
+        if (Float.isNaN(m_targetActiveHipAngle))
+            m_targetActiveHipAngle = 0.0f;
 
-        servoTowardAngle(m_hipJoint[m_activeLegIdx], targetActiveHipAngle, HIP_PROP_GAIN, HIP_DRAG_GAIN);
+        m_activeHipTorque = servoTowardAngle(m_hipJoint[m_activeLegIdx], m_targetActiveHipAngle, HIP_PROP_GAIN, HIP_DRAG_GAIN);
         /////////////////////////////////////////////////////////////////////////////////////////////
     }
 
@@ -357,7 +386,9 @@ public class BipedHopper {
         return (1-alpha)*x + alpha*y;
     }
 
-    protected void servoTowardAngle(RevoluteJoint joint, float targetAngle, float propGain, float dragGain)     {
+    /** Calculates servo torque for revolute joint toward given angle using specified gains.
+     * Returns applied torque. */
+    protected float servoTowardAngle(RevoluteJoint joint, float targetAngle, float propGain, float dragGain)     {
         float jointAngle = joint.getJointAngle();
         float jointSpeed = joint.getJointSpeed();
         float targetJointDelta = targetAngle - jointAngle;
@@ -368,10 +399,13 @@ public class BipedHopper {
 
         //Hacky, but get joint to use our torque by setting our torque as max and forcing use of max torque
         //by setting some arbitrarily large velocity in servo direction
-        torque = Math.abs(torque);
-        m_hipJoint[m_activeLegIdx].enableMotor(true);
-        m_hipJoint[m_activeLegIdx].setMaxMotorTorque(torque);
-        m_hipJoint[m_activeLegIdx].setMotorSpeed(targetJointDelta > 0 ? BIG_NUMBER : -BIG_NUMBER);
+        float absTorque = Math.abs(torque);
+        float signTorque = Math.signum(torque);
+        joint.enableMotor(true);
+        joint.setMaxMotorTorque(absTorque);
+        joint.setMotorSpeed(signTorque > 0 ? BIG_NUMBER : -BIG_NUMBER);
+
+        return torque;
     }
 
 }

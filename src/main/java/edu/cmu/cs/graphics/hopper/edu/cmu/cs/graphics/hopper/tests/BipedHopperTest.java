@@ -1,13 +1,14 @@
 package edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests;
 
 import edu.cmu.cs.graphics.hopper.BipedHopper;
+import edu.cmu.cs.graphics.hopper.VecUtils;
 import org.jbox2d.callbacks.ContactImpulse;
+import org.jbox2d.callbacks.DebugDraw;
 import org.jbox2d.collision.Manifold;
 import org.jbox2d.collision.shapes.CircleShape;
 import org.jbox2d.collision.shapes.EdgeShape;
 import org.jbox2d.collision.shapes.PolygonShape;
-import org.jbox2d.common.MathUtils;
-import org.jbox2d.common.Vec2;
+import org.jbox2d.common.*;
 import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.contacts.Contact;
 import org.jbox2d.dynamics.joints.*;
@@ -77,6 +78,8 @@ public class BipedHopperTest extends TestbedTest {
             return;
         }
 
+//        getWorld().setGravity(new Vec2(0.0f,0.0f));
+
         // Ground
         {
             BodyDef bd = new BodyDef();
@@ -87,6 +90,7 @@ public class BipedHopperTest extends TestbedTest {
             FixtureDef groundFd = new FixtureDef();
 //            groundFd.restitution = 1.0f; //assume perfectly elastic bounces
             groundFd.density = 0.0f;
+            groundFd.friction = 1.0f;
             groundFd.shape = shape;
             ground.createFixture(groundFd);
 
@@ -103,7 +107,27 @@ public class BipedHopperTest extends TestbedTest {
 
     @Override
     public void keyPressed(char key, int argKeyCode) {
+        float VEL_INCREMENT_X = 0.1f;
         switch (key) {
+            //Clear velocities
+            case 'v':
+                for (Body b : m_hopper.getBodies())  {
+                    b.setAngularVelocity(0);
+                    b.setLinearVelocity(new Vec2(0,0));
+                }
+                break;
+            //Add positive vels
+            case 'b':
+                for (Body b : m_hopper.getBodies())  {
+                    b.getLinearVelocity().addLocal(VEL_INCREMENT_X, 0);
+                }
+                break;
+            //Clear velocities
+            case 'c':
+                for (Body b : m_hopper.getBodies())  {
+                    b.getLinearVelocity().addLocal(-VEL_INCREMENT_X, 0);
+                }
+                break;
 //            case 'a':
 //                m_hipJoint.setMotorSpeed(-m_motorSpeed);
 //                break;
@@ -133,6 +157,8 @@ public class BipedHopperTest extends TestbedTest {
         float hz = settings.getSetting(TestbedSettings.Hz).value;
         float timeStep = hz > 0f ? 1f / hz : 0;
         m_hopper.updateControl(timeStep);
+
+        drawHopperDebug();
     }
 
     @Override
@@ -176,6 +202,29 @@ public class BipedHopperTest extends TestbedTest {
     @Override
     public void preSolve(Contact contact, Manifold oldManifold) {
         super.preSolve(contact, oldManifold);
+    }
+
+    protected void drawHopperDebug() {
+        DebugDraw dd = getModel().getDebugDraw();
+        if (m_hopper != null) {
+            Transform bodyTransform = m_hopper.getMainBody().getTransform();
+
+            //Get target active & idle leg directions in world coords
+            Vec2 targetActiveLegDir = new Vec2(0.0f,-1.0f);
+            VecUtils.rotateLocal(targetActiveLegDir, m_hopper.m_targetActiveHipAngle);
+            VecUtils.rotateLocal(targetActiveLegDir, m_hopper.m_bodyPitch);
+            Vec2 activeLegTorqueLine = targetActiveLegDir.mul(m_hopper.m_activeHipTorque * 0.1f);
+            dd.drawSegment(bodyTransform.p, bodyTransform.p.add(targetActiveLegDir), new Color3f(1,0,0));
+            dd.drawSegment(bodyTransform.p, bodyTransform.p.add(activeLegTorqueLine), new Color3f(1,0,1));
+
+            Vec2 targetIdleLegDir = new Vec2(0.0f,-1.0f);
+            VecUtils.rotateLocal(targetIdleLegDir, m_hopper.m_targetdIdleHipAngle);
+            VecUtils.rotateLocal(targetIdleLegDir, m_hopper.m_bodyPitch);
+            Vec2 idleLegTorqueLine = targetIdleLegDir.mul(m_hopper.m_idleHipTorque * 0.1f);
+            dd.drawSegment(bodyTransform.p, bodyTransform.p.add(targetIdleLegDir), new Color3f(0,1,0));
+            dd.drawSegment(bodyTransform.p, bodyTransform.p.add(idleLegTorqueLine), new Color3f(0,1,1));
+
+        }
     }
 }
 
