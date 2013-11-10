@@ -20,29 +20,37 @@ public class BipedHopper {
         UNLOAD
     }
 
-    final int NUM_LEGS = 1;
+    final int NUM_LEGS = 2;
 
-    private final float HIP_PROP_GAIN = 20.0f;
-    private final float HIP_DRAG_GAIN = 5.0f;
+    private final float HIP_PROP_GAIN = 500.0f;
+    private final float HIP_DRAG_GAIN = 100.0f;
 
-    private final float THRUST_SPRING_FREQUENCY = 50.0f; //Hz
-    private final float THRUST_SPRING_DAMPING_RATIO = 0.8f;
-    private final float HOP_SPRING_FREQUENCY = 20.0f; //Hz
-    private final float HOP_SPRING_DAMPING_RATIO = 0.2f;
+    private final float ACTIVE_THRUST_LENGTH_DELTA = 0.3f;  //push down on spring during thrust
+    private final float IDLE_THRUST_LENGTH_DELTA = -2.5f;   //tuck away
+
+//    private final float THRUST_SPRING_FREQUENCY = 50.0f; //Hz
+//    private final float THRUST_SPRING_DAMPING_RATIO = 0.8f;
+//    private final float HOP_SPRING_FREQUENCY = 20.0f; //Hz
+//    private final float HOP_SPRING_DAMPING_RATIO = 0.2f;
+
+    private final float THRUST_SPRING_PROP_GAIN = 2000.0f;
+    private final float THRUST_SPRING_DRAG_GAIN = 10.0f;
+    private final float HOP_SPRING_PROP_GAIN = 600.0f;
+    private final float HOP_SPRING_DRAG_GAIN = 5.0f;
 
     private final Vec2 CHASSIS_SIZE = new Vec2(2f, 0.5f);
     private final float CHASSIS_DENSITY = 1.0f;
 
     private final Vec2 HIP_SIZE = new Vec2(0.3f, 0.1f);
-    private final float HIP_DENSITY = CHASSIS_DENSITY * 1.0f;
+    private final float HIP_DENSITY = CHASSIS_DENSITY * 10.0f;
     private final float UPPER_LEG_DEFAULT_LENGTH = 3.0f;
 
     private final Vec2 KNEE_SIZE = new Vec2(0.2f, 0.1f);
-    private final float KNEE_DENSITY = CHASSIS_DENSITY * 0.1f;
+    private final float KNEE_DENSITY = CHASSIS_DENSITY * 10;
     private final float LOWER_LEG_DEFAULT_LENGTH = 2.0f;
 
     private final float FOOT_RADIUS = 0.2f;
-    private final float FOOT_DENSITY = CHASSIS_DENSITY * 0.1f;
+    private final float FOOT_DENSITY = CHASSIS_DENSITY * 10;
 
     public boolean m_inContact;
     public float m_springVel;
@@ -55,10 +63,15 @@ public class BipedHopper {
 
     //Joints (arrays where each index corresponds to one of the legs)
     public RevoluteJoint m_hipJoint[];
-    public PrismaticJoint m_upperLegJoint[];    //keeps hip & knee aligned along leg direction
-    public DistanceJoint m_thrustSpring[];       //used to control leg length & excite lower leg spring during takeoff thrust
-    public PrismaticJoint m_lowerLegJoint[];     //keeps knee & foot aligned along leg direction
-    public DistanceJoint m_hopSpring[];          //stores & returns bounce energy for hopper
+    public PrismaticJoint m_thrustJoint[];    //keeps hip & knee aligned along leg direction
+//    public DistanceJoint m_thrustSpring[];       //used to control leg length & excite lower leg spring during takeoff thrust
+    public PrismaticJoint m_springJoint[];     //keeps knee & foot aligned along leg direction
+//    public DistanceJoint m_hopSpring[];          //stores & returns bounce energy for hopper
+
+    //Since Box2D uses initial joint lengths as reference 0 translation, we need to store that
+    //value if we'd like to use "absolute" lengths of a joint
+    protected float m_initThrustJointLength[];
+    protected float m_initSpringJointLength[];
 
     protected Vec2 m_offset = new Vec2();
     protected Body m_chassis;
@@ -70,7 +83,9 @@ public class BipedHopper {
     public float m_targetBodyVelX = 0.0f;
     public float m_targetBodyPitch = 0.0f;          //target angle of main hopper body relative to ground
     public float m_targetActiveHipAngle = 0.0f;     //target angle of active hip relative to body
-    public float m_targetdIdleHipAngle = 0.0f;       //target angle of idle hip relative to body
+    public float m_targetdIdleHipAngle = 0.0f;      //target angle of idle hip relative to body
+    public float m_targetThrustSpringLength[];      //target lengths of upper leg thrust spring for each leg
+    public float m_targetHopSpringLength[];         //target lengths of lower leg hoppiung spring for each leg
 
     //Torques/forces on various joints (readablel; modified internally)
     public float m_activeHipTorque = 0.0f;
@@ -95,10 +110,16 @@ public class BipedHopper {
         m_knee = new Body[NUM_LEGS];
         m_foot = new Body[NUM_LEGS];
         m_hipJoint = new RevoluteJoint[NUM_LEGS];
-        m_upperLegJoint = new PrismaticJoint[NUM_LEGS];
-        m_thrustSpring = new DistanceJoint[NUM_LEGS];
-        m_lowerLegJoint = new PrismaticJoint[NUM_LEGS];
-        m_hopSpring = new DistanceJoint[NUM_LEGS];
+        m_thrustJoint = new PrismaticJoint[NUM_LEGS];
+//        m_thrustSpring = new DistanceJoint[NUM_LEGS];
+        m_springJoint = new PrismaticJoint[NUM_LEGS];
+//        m_hopSpring = new DistanceJoint[NUM_LEGS];
+
+        m_initThrustJointLength = new float[NUM_LEGS];
+        m_initSpringJointLength = new float[NUM_LEGS];
+
+        m_targetThrustSpringLength = new float[NUM_LEGS];
+        m_targetHopSpringLength = new float[NUM_LEGS];
     }
 
     /** Returns list of all bodies belonging to the hopper */
@@ -208,25 +229,28 @@ public class BipedHopper {
             {
                 {
                     PrismaticJointDef jd = new PrismaticJointDef();
-                    jd.initialize(m_hip[i], m_knee[i], m_hip[i].getPosition().add(m_knee[i].getPosition()).mulLocal(0.5f), new Vec2(0, 1.0f));
+                    //Note the ordering: We want the knee to be the "main" body for correct spring direction
+                    jd.initialize(m_knee[i], m_hip[i], m_hip[i].getPosition().add(m_knee[i].getPosition()).mulLocal(0.5f), new Vec2(0, 1.0f));
                     jd.collideConnected = false;
-                    m_upperLegJoint[i] = (PrismaticJoint) world.createJoint(jd);
+                    jd.enableMotor = true;
+                    m_thrustJoint[i] = (PrismaticJoint) world.createJoint(jd);
+                    m_initThrustJointLength[i] = m_thrustJoint[i].getBodyB().getPosition().sub(m_thrustJoint[i].getBodyA().getPosition()).length();
                 }
 
-                {
-                    DistanceJointDef jd = new DistanceJointDef();
-                    jd.bodyA = m_hip[i];
-                    jd.bodyB = m_knee[i];
-                    jd.localAnchorA.set(0,0);
-                    jd.localAnchorB.set(0,0);
-                    Vec2 p1 = jd.bodyA.getWorldPoint(jd.localAnchorA);
-                    Vec2 p2 = jd.bodyB.getWorldPoint(jd.localAnchorB);
-                    Vec2 d = p2.sub(p1);
-                    jd.length = d.length();
-                    jd.frequencyHz = THRUST_SPRING_FREQUENCY;
-                    jd.dampingRatio = THRUST_SPRING_DAMPING_RATIO;
-                    m_thrustSpring[i] = (DistanceJoint) world.createJoint(jd);
-                }
+//                {
+//                    DistanceJointDef jd = new DistanceJointDef();
+//                    jd.bodyA = m_hip[i];
+//                    jd.bodyB = m_knee[i];
+//                    jd.localAnchorA.set(0,0);
+//                    jd.localAnchorB.set(0,0);
+//                    Vec2 p1 = jd.bodyA.getWorldPoint(jd.localAnchorA);
+//                    Vec2 p2 = jd.bodyB.getWorldPoint(jd.localAnchorB);
+//                    Vec2 d = p2.sub(p1);
+//                    jd.length = d.length();
+//                    jd.frequencyHz = THRUST_SPRING_FREQUENCY;
+//                    jd.dampingRatio = THRUST_SPRING_DAMPING_RATIO;
+//                    m_thrustSpring[i] = (DistanceJoint) world.createJoint(jd);
+//                }
             }
 
             //Lower leg spring
@@ -234,30 +258,34 @@ public class BipedHopper {
                 //Constrain motion to lie along hopper leg axis
                 {
                     PrismaticJointDef jd = new PrismaticJointDef();
-                    jd.initialize(m_knee[i], m_foot[i], m_knee[i].getPosition().add(m_foot[i].getPosition()).mulLocal(0.5f), new Vec2(0, 1.0f));
+                    //Note the ordering: We want the foot to be the "main" body for correct spring direction
+                    jd.initialize(m_foot[i], m_knee[i], m_knee[i].getPosition().add(m_foot[i].getPosition()).mulLocal(0.5f), new Vec2(0, 1.0f));
                     jd.collideConnected = false;
+                    jd.enableMotor = true;
                     jd.enableLimit = true;
                     //Mechanical stop: Prevent spring from shrinking below some static length
-                    jd.lowerTranslation = 0;
-                    jd.upperTranslation = LOWER_LEG_DEFAULT_LENGTH; //slight offset to prevent singular config;
-                    m_lowerLegJoint[i] = (PrismaticJoint) world.createJoint(jd);
+                    jd.lowerTranslation = -LOWER_LEG_DEFAULT_LENGTH;
+                    jd.upperTranslation = 0;
+                    m_springJoint[i] = (PrismaticJoint) world.createJoint(jd);
+                    m_initSpringJointLength[i] = m_springJoint[i].getBodyB().getPosition().sub(m_springJoint[i].getBodyA().getPosition()).length();
+                    m_targetHopSpringLength[i] = m_initSpringJointLength[i];
                 }
 
-                //Add the "springiness"
-                {
-                    DistanceJointDef jd = new DistanceJointDef();
-                    jd.bodyA = m_knee[i];
-                    jd.bodyB = m_foot[i];
-                    jd.localAnchorA.set(0,0);
-                    jd.localAnchorB.set(0,0);
-                    Vec2 p1 = jd.bodyA.getWorldPoint(jd.localAnchorA);
-                    Vec2 p2 = jd.bodyB.getWorldPoint(jd.localAnchorB);
-                    Vec2 d = p2.sub(p1);
-                    jd.length = d.length();
-                    jd.frequencyHz = HOP_SPRING_FREQUENCY;
-                    jd.dampingRatio = HOP_SPRING_DAMPING_RATIO;
-                    m_hopSpring[i] = (DistanceJoint) world.createJoint(jd);
-                }
+//                //Add the "springiness"
+//                {
+//                    DistanceJointDef jd = new DistanceJointDef();
+//                    jd.bodyA = m_knee[i];
+//                    jd.bodyB = m_foot[i];
+//                    jd.localAnchorA.set(0,0);
+//                    jd.localAnchorB.set(0,0);
+//                    Vec2 p1 = jd.bodyA.getWorldPoint(jd.localAnchorA);
+//                    Vec2 p2 = jd.bodyB.getWorldPoint(jd.localAnchorB);
+//                    Vec2 d = p2.sub(p1);
+//                    jd.length = d.length();
+//                    jd.frequencyHz = HOP_SPRING_FREQUENCY;
+//                    jd.dampingRatio = HOP_SPRING_DAMPING_RATIO;
+//                    m_hopSpring[i] = (DistanceJoint) world.createJoint(jd);
+//                }
             }
         }
     }
@@ -265,7 +293,8 @@ public class BipedHopper {
     /** Updates control & actuation for this hopper based on given simulation timestep dt (in seconds) */
     public void updateControl(float dt) {
         //Update sensor values
-        m_springVel = m_lowerLegJoint[m_activeLegIdx].getJointSpeed();
+        if (m_springJoint != null)
+            m_springVel = m_springJoint[m_activeLegIdx].getJointSpeed();
         m_bodyVel = m_chassis.getLinearVelocity();
         m_bodyPitch = m_chassis.getAngle();
 
@@ -278,7 +307,7 @@ public class BipedHopper {
                 break;
             case COMPRESS:
                 //Switch to thrusting once at or past fully compressed spring
-                if (m_springVel < 0)
+                if (m_springVel > 0)
                     m_controlState = ControlState.THRUST;
                 break;
             case THRUST:
@@ -308,7 +337,8 @@ public class BipedHopper {
                 servoBodyPitch();
                 //Add thrust back by pushing down on spring
                 //TODO: Correct thrust for desired hop height
-                m_thrustSpring[m_activeLegIdx].setLength(UPPER_LEG_DEFAULT_LENGTH + 0.3f);
+                //m_thrustSpring[m_activeLegIdx].setLength(UPPER_LEG_DEFAULT_LENGTH + 0.3f);
+                m_targetThrustSpringLength[m_activeLegIdx] = UPPER_LEG_DEFAULT_LENGTH + ACTIVE_THRUST_LENGTH_DELTA;
                 break;
             case UNLOAD:
                 //TODO
@@ -321,6 +351,12 @@ public class BipedHopper {
         //Idle hip is constantly servoed throughout control cycle
         if (NUM_LEGS > 1)
             servoIdleHipPitch();
+
+        //Do manual linear joint force update to emulate springiness
+        for (int i = 0; i < NUM_LEGS; i++) {
+            updateSpring(m_thrustJoint[i], m_targetThrustSpringLength[i] - m_initThrustJointLength[i], THRUST_SPRING_PROP_GAIN, THRUST_SPRING_DRAG_GAIN);
+            updateSpring(m_springJoint[i], m_targetHopSpringLength[i] - m_initSpringJointLength[i], HOP_SPRING_PROP_GAIN, HOP_SPRING_DRAG_GAIN);
+        }
     }
 
     protected void swapActiveLeg() {
@@ -348,12 +384,16 @@ public class BipedHopper {
         //(to make this gradual, use lerp on current value (hacky, but seems to work well))
         float alpha = Math.min(1.0f, 1.0f * dt);
 
-        float idleLegTargetLength = UPPER_LEG_DEFAULT_LENGTH - 2.0f;
-        float activeLegTargetLength = UPPER_LEG_DEFAULT_LENGTH + 0.3f;
+        float idleLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH + IDLE_THRUST_LENGTH_DELTA;
+        float activeLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH;
 
+//        if (NUM_LEGS > 1)
+//            m_thrustSpring[m_idleLegIdx].setLength(lerp(m_thrustSpring[m_idleLegIdx].getLength(), idleLegTargetLength, alpha));
+//        m_thrustSpring[m_activeLegIdx].setLength(lerp(m_thrustSpring[m_activeLegIdx].getLength(), activeLegTargetLength, alpha));
+
+        m_targetThrustSpringLength[m_activeLegIdx] = lerp(m_targetThrustSpringLength[m_activeLegIdx], activeLegTerminalLength, alpha);
         if (NUM_LEGS > 1)
-            m_thrustSpring[m_idleLegIdx].setLength(lerp(m_thrustSpring[m_idleLegIdx].getLength(), idleLegTargetLength, alpha));
-        m_thrustSpring[m_activeLegIdx].setLength(lerp(m_thrustSpring[m_activeLegIdx].getLength(), activeLegTargetLength, alpha));
+            m_targetThrustSpringLength[m_idleLegIdx] = lerp(m_targetThrustSpringLength[m_idleLegIdx], idleLegTerminalLength, alpha);
         /////////////////////////////////////////////////////////////////////////////////////////////
 
         /////// ANGLE /////////////////////////////////////////////////////////////////////////////
@@ -363,7 +403,7 @@ public class BipedHopper {
         float desiredLandingOffsetX = (0.5f * m_bodyVel.x * m_nextSupportPeriodEst) + (targetVelGain * deltaFromTargetVel);
 
         //Bound to some reasonable range
-        float maxAllowedOffsetX = 0.5f * activeLegTargetLength;
+        float maxAllowedOffsetX = 0.5f * activeLegTerminalLength;
         if (desiredLandingOffsetX > maxAllowedOffsetX)
             desiredLandingOffsetX = maxAllowedOffsetX;
         if (desiredLandingOffsetX < -maxAllowedOffsetX)
@@ -372,7 +412,7 @@ public class BipedHopper {
         m_targetActiveHipAngle =  0.0f;
         float eps = 0.000001f;
         if (Math.abs(desiredLandingOffsetX) > eps)
-            m_targetActiveHipAngle = -m_bodyPitch + (float)(Math.asin(desiredLandingOffsetX/activeLegTargetLength));
+            m_targetActiveHipAngle = -m_bodyPitch + (float)(Math.asin(desiredLandingOffsetX/activeLegTerminalLength));
 
         if (Float.isNaN(m_targetActiveHipAngle))
             m_targetActiveHipAngle = 0.0f;
@@ -406,6 +446,30 @@ public class BipedHopper {
         joint.setMotorSpeed(signTorque > 0 ? BIG_NUMBER : -BIG_NUMBER);
 
         return torque;
+    }
+
+    /** Updates velocity on given prismatic joint to create "spring" effect, as outlined here:
+     *   http://www.box2d.org/forum/viewtopic.php?f=3&t=1007
+     *   Returns applied force set on the joint.
+     *   (And, yes, this is very similar to "servoTowardAngle") */
+    protected float updateSpring(PrismaticJoint joint, float restLength, float propGain, float dragGain)     {
+        float x = joint.getJointTranslation();
+        float velX = joint.getJointSpeed();
+        float deltaX = restLength - x;
+
+        final float BIG_NUMBER = Float.MAX_VALUE;
+
+        float force = propGain*deltaX - dragGain*velX;
+
+        //Hacky, but get joint to use our force by setting our force as max and requiring use of max force
+        //by setting some arbitrarily large velocity in servo direction
+        float absForce = Math.abs(force);
+        float signForce = Math.signum(force);
+        joint.enableMotor(true);
+        joint.setMaxMotorForce(absForce);
+        joint.setMotorSpeed(signForce > 0 ? BIG_NUMBER : -BIG_NUMBER);
+
+        return force;
     }
 
 }
