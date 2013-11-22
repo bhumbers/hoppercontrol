@@ -108,6 +108,7 @@ public class BipedHopperTest extends TestbedTest {
     @Override
     public void keyPressed(char key, int argKeyCode) {
         float VEL_INCREMENT_X = 0.1f;
+        float ANG_VEL_INCREMENT = 0.1f;
         switch (key) {
             //Clear velocities
             case 'v':
@@ -126,6 +127,18 @@ public class BipedHopperTest extends TestbedTest {
             case 'c':
                 for (Body b : m_hopper.getBodies())  {
                     b.getLinearVelocity().addLocal(-VEL_INCREMENT_X, 0);
+                }
+                break;
+            //Add negative rot vel to chassis
+            case 'x':
+                for (Body b : m_hopper.getBodies())  {
+                    b.setAngularVelocity(b.getAngularVelocity() - ANG_VEL_INCREMENT);
+                }
+                break;
+            //Add positive rot vel to chassis
+            case 'n':
+                for (Body b : m_hopper.getBodies())  {
+                    b.setAngularVelocity(b.getAngularVelocity() + ANG_VEL_INCREMENT);
                 }
                 break;
 //            case 'a':

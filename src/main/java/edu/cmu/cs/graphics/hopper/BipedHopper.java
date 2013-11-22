@@ -23,9 +23,12 @@ public class BipedHopper {
     final int NUM_LEGS = 2;
 
     private final float HIP_PROP_GAIN = 500.0f;
-    private final float HIP_DRAG_GAIN = 100.0f;
+    private final float HIP_DRAG_GAIN = 200.0f;
 
-    private final float ACTIVE_THRUST_LENGTH_DELTA = 0.3f;  //push down on spring during thrust
+    private final float FLIGHT_LEG_PLACEMENT_GAIN = 0.01f;
+
+
+    private final float ACTIVE_THRUST_LENGTH_DELTA = 0.0f;  //push down on spring during thrust
     private final float IDLE_THRUST_LENGTH_DELTA = -2.5f;   //tuck away
 
 //    private final float THRUST_SPRING_FREQUENCY = 50.0f; //Hz
@@ -34,23 +37,25 @@ public class BipedHopper {
 //    private final float HOP_SPRING_DAMPING_RATIO = 0.2f;
 
     private final float THRUST_SPRING_PROP_GAIN = 2000.0f;
-    private final float THRUST_SPRING_DRAG_GAIN = 10.0f;
-    private final float HOP_SPRING_PROP_GAIN = 600.0f;
-    private final float HOP_SPRING_DRAG_GAIN = 5.0f;
+    private final float THRUST_SPRING_DRAG_GAIN = 20.0f;
+    private final float THRUST_SPRING_EXPONENT = 1.1f;
+    private final float HOP_SPRING_PROP_GAIN = 1000.0f;
+    private final float HOP_SPRING_DRAG_GAIN = 10.0f;
+    private final float HOP_SPRING_EXPONENT = 1.1f;
 
     private final Vec2 CHASSIS_SIZE = new Vec2(2f, 0.5f);
     private final float CHASSIS_DENSITY = 1.0f;
 
     private final Vec2 HIP_SIZE = new Vec2(0.3f, 0.1f);
-    private final float HIP_DENSITY = CHASSIS_DENSITY * 10.0f;
+    private final float HIP_DENSITY = CHASSIS_DENSITY * 5;
     private final float UPPER_LEG_DEFAULT_LENGTH = 3.0f;
 
     private final Vec2 KNEE_SIZE = new Vec2(0.2f, 0.1f);
-    private final float KNEE_DENSITY = CHASSIS_DENSITY * 10;
+    private final float KNEE_DENSITY = CHASSIS_DENSITY * 5;
     private final float LOWER_LEG_DEFAULT_LENGTH = 2.0f;
 
     private final float FOOT_RADIUS = 0.2f;
-    private final float FOOT_DENSITY = CHASSIS_DENSITY * 10;
+    private final float FOOT_DENSITY = CHASSIS_DENSITY * 5;
 
     public boolean m_inContact;
     public float m_springVel;
@@ -81,7 +86,7 @@ public class BipedHopper {
     protected List<Body> m_bodies;
 
     public float m_targetBodyVelX = 0.0f;
-    public float m_targetBodyPitch = 0.0f;          //target angle of main hopper body relative to ground
+    public float m_targetBodyPitch = 0.0f;         //target angle of main hopper body *relative to world coordinate frame*
     public float m_targetActiveHipAngle = 0.0f;     //target angle of active hip relative to body
     public float m_targetdIdleHipAngle = 0.0f;      //target angle of idle hip relative to body
     public float m_targetThrustSpringLength[];      //target lengths of upper leg thrust spring for each leg
@@ -138,7 +143,7 @@ public class BipedHopper {
     public boolean getInContact() {return m_inContact;}
 
     public void init(World world) {
-        m_offset.set(0.0f, 12.0f);
+        m_offset.set(0.0f, 6.0f);
 
         // Chassis
         {
@@ -354,8 +359,8 @@ public class BipedHopper {
 
         //Do manual linear joint force update to emulate springiness
         for (int i = 0; i < NUM_LEGS; i++) {
-            updateSpring(m_thrustJoint[i], m_targetThrustSpringLength[i] - m_initThrustJointLength[i], THRUST_SPRING_PROP_GAIN, THRUST_SPRING_DRAG_GAIN);
-            updateSpring(m_springJoint[i], m_targetHopSpringLength[i] - m_initSpringJointLength[i], HOP_SPRING_PROP_GAIN, HOP_SPRING_DRAG_GAIN);
+            updateSpring(m_thrustJoint[i], m_targetThrustSpringLength[i] - m_initThrustJointLength[i], THRUST_SPRING_PROP_GAIN, THRUST_SPRING_DRAG_GAIN, THRUST_SPRING_EXPONENT);
+            updateSpring(m_springJoint[i], m_targetHopSpringLength[i] - m_initSpringJointLength[i], HOP_SPRING_PROP_GAIN, HOP_SPRING_DRAG_GAIN, HOP_SPRING_EXPONENT);
         }
     }
 
@@ -368,7 +373,8 @@ public class BipedHopper {
     }
 
     protected void servoBodyPitch() {
-        m_activeHipTorque = servoTowardAngle(m_hipJoint[m_activeLegIdx], m_targetBodyPitch, HIP_PROP_GAIN, HIP_DRAG_GAIN);
+        float targetActiveHipAngle = m_bodyPitch - m_targetBodyPitch;
+        m_activeHipTorque = servoTowardAngle(m_hipJoint[m_activeLegIdx], targetActiveHipAngle, HIP_PROP_GAIN, HIP_DRAG_GAIN);
     }
 
     protected void servoIdleHipPitch() {
@@ -399,8 +405,7 @@ public class BipedHopper {
         /////// ANGLE /////////////////////////////////////////////////////////////////////////////
         //Set leg position using hip based on desired landing location
         float deltaFromTargetVel = m_bodyVel.x - m_targetBodyVelX;
-        float targetVelGain = 0.5f;
-        float desiredLandingOffsetX = (0.5f * m_bodyVel.x * m_nextSupportPeriodEst) + (targetVelGain * deltaFromTargetVel);
+        float desiredLandingOffsetX = (0.5f * m_bodyVel.x * m_nextSupportPeriodEst) + (FLIGHT_LEG_PLACEMENT_GAIN * deltaFromTargetVel);
 
         //Bound to some reasonable range
         float maxAllowedOffsetX = 0.5f * activeLegTerminalLength;
@@ -448,18 +453,25 @@ public class BipedHopper {
         return torque;
     }
 
+
+    protected float updateLinearSpring(PrismaticJoint joint, float restLength, float propGain, float dragGain) {
+        return updateSpring(joint, restLength, propGain, dragGain, 1);
+    }
+
     /** Updates velocity on given prismatic joint to create "spring" effect, as outlined here:
      *   http://www.box2d.org/forum/viewtopic.php?f=3&t=1007
      *   Returns applied force set on the joint.
      *   (And, yes, this is very similar to "servoTowardAngle") */
-    protected float updateSpring(PrismaticJoint joint, float restLength, float propGain, float dragGain)     {
+    protected float updateSpring(PrismaticJoint joint, float restLength, float propGain, float dragGain, float exponent)     {
         float x = joint.getJointTranslation();
         float velX = joint.getJointSpeed();
         float deltaX = restLength - x;
+        float deltaXSign = Math.signum(deltaX);
 
         final float BIG_NUMBER = Float.MAX_VALUE;
 
-        float force = propGain*deltaX - dragGain*velX;
+        float propForceMag = (float)Math.pow(Math.abs(propGain*deltaX), exponent);
+        float force = deltaXSign*propForceMag - dragGain*velX;
 
         //Hacky, but get joint to use our force by setting our force as max and requiring use of max force
         //by setting some arbitrarily large velocity in servo direction
