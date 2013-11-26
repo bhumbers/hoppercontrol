@@ -25,8 +25,7 @@ public class BipedHopper {
     private final float HIP_PROP_GAIN = 500.0f;
     private final float HIP_DRAG_GAIN = 200.0f;
 
-    private final float FLIGHT_LEG_PLACEMENT_GAIN = 0.01f;
-
+    private final float TARGET_VELOCITY_LEG_PLACEMENT_GAIN = 0.1f;
 
     private final float ACTIVE_THRUST_LENGTH_DELTA = 0.0f;  //push down on spring during thrust
     private final float IDLE_THRUST_LENGTH_DELTA = -2.5f;   //tuck away
@@ -62,6 +61,8 @@ public class BipedHopper {
     public ControlState m_controlState;
     public Vec2 m_bodyVel;
     public float m_bodyPitch;
+
+    public float m_targetBodyVelXLegPlacementGain = TARGET_VELOCITY_LEG_PLACEMENT_GAIN;
 
     protected float m_currSupportPeriod;             //running count of time length of current support period (or 0 if not in support)
     protected float m_nextSupportPeriodEst;          //estimate of length of next period that active leg is touching ground
@@ -407,7 +408,7 @@ public class BipedHopper {
         /////// ANGLE /////////////////////////////////////////////////////////////////////////////
         //Set leg position using hip based on desired landing location
         float deltaFromTargetVel = m_bodyVel.x - m_targetBodyVelX;
-        float desiredLandingOffsetX = (0.5f * m_bodyVel.x * m_nextSupportPeriodEst) + (FLIGHT_LEG_PLACEMENT_GAIN * deltaFromTargetVel);
+        float desiredLandingOffsetX = (0.5f * m_bodyVel.x * m_nextSupportPeriodEst) + (m_targetBodyVelXLegPlacementGain * deltaFromTargetVel);
 
         //Bound to some reasonable range
         float maxAllowedOffsetX = 0.5f * activeLegTerminalLength;

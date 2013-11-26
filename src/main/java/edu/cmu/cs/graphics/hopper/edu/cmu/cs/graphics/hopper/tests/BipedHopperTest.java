@@ -15,6 +15,8 @@ import org.jbox2d.dynamics.joints.*;
 import org.jbox2d.testbed.framework.TestbedSettings;
 import org.jbox2d.testbed.framework.TestbedTest;
 
+import java.text.DecimalFormat;
+
 
 /** Main scene setup and control update class for BipedHoppper
  * Modeled on the TheoJansenTest from JBox2D TestBed.
@@ -25,6 +27,8 @@ public class BipedHopperTest extends TestbedTest {
 //    private static final long LOWER_LEG_TAG = 8;
 //    private static final long HIP_TAG = 16;
 //    private static final long KNEE_TAG = 32;
+
+    static DecimalFormat numFormat = new DecimalFormat( "#,###,###,##0.000" );
 
     BipedHopper m_hopper;
 
@@ -78,6 +82,9 @@ public class BipedHopperTest extends TestbedTest {
             return;
         }
 
+        //Only stable at shorter timesteps...
+//        set
+
 //        getWorld().setGravity(new Vec2(0.0f,0.0f));
 
         // Ground
@@ -107,9 +114,26 @@ public class BipedHopperTest extends TestbedTest {
 
     @Override
     public void keyPressed(char key, int argKeyCode) {
+        float TARGET_VEL_INCREMENT_X = 0.5f;
+        float BLAH_INCREMENT = 0.01f;
         float VEL_INCREMENT_X = 0.1f;
         float ANG_VEL_INCREMENT = 0.1f;
         switch (key) {
+            //Modify target velocity
+            case 'w':
+                m_hopper.m_targetBodyVelX += TARGET_VEL_INCREMENT_X;
+                break;
+            case 'q':
+                m_hopper.m_targetBodyVelX -= TARGET_VEL_INCREMENT_X;
+                break;
+
+            case 'p':
+                m_hopper.m_targetBodyVelXLegPlacementGain += BLAH_INCREMENT;
+                break;
+            case 'o':
+                m_hopper.m_targetBodyVelXLegPlacementGain -= BLAH_INCREMENT;
+                break;
+
             //Clear velocities
             case 'v':
                 for (Body b : m_hopper.getBodies())  {
@@ -165,6 +189,10 @@ public class BipedHopperTest extends TestbedTest {
 
         if (m_hopper != null) {
             addTextLine("Control State: " + m_hopper.getControlState());
+            addTextLine("Active Leg Spring Compression: " + numFormat.format(m_hopper.getActiveSpringJoint().getJointTranslation()));
+            addTextLine("Body Vel X: " + numFormat.format(m_hopper.getMainBody().getLinearVelocity().x));
+            addTextLine("Target Body Vel X: " + numFormat.format(m_hopper.m_targetBodyVelX));
+            addTextLine("Vel X Leg Gain: " + numFormat.format(m_hopper.m_targetBodyVelXLegPlacementGain));
         }
 
         float hz = settings.getSetting(TestbedSettings.Hz).value;
