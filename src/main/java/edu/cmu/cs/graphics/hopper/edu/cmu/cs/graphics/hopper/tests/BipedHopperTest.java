@@ -12,6 +12,7 @@ import org.jbox2d.common.*;
 import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.contacts.Contact;
 import org.jbox2d.dynamics.joints.*;
+import org.jbox2d.testbed.framework.TestbedSetting;
 import org.jbox2d.testbed.framework.TestbedSettings;
 import org.jbox2d.testbed.framework.TestbedTest;
 
@@ -31,6 +32,8 @@ public class BipedHopperTest extends TestbedTest {
     static DecimalFormat numFormat = new DecimalFormat( "#,###,###,##0.000" );
 
     BipedHopper m_hopper;
+
+    boolean m_followAvatar;
 
     @Override
     public Long getTag(Body argBody) {
@@ -110,6 +113,8 @@ public class BipedHopperTest extends TestbedTest {
 
         m_hopper = new BipedHopper();
         m_hopper.init(getWorld());
+
+        m_followAvatar = true;
     }
 
     @Override
@@ -118,6 +123,7 @@ public class BipedHopperTest extends TestbedTest {
         float BLAH_INCREMENT = 0.01f;
         float VEL_INCREMENT_X = 0.1f;
         float ANG_VEL_INCREMENT = 0.1f;
+
         switch (key) {
             //Modify target velocity
             case 'w':
@@ -147,7 +153,7 @@ public class BipedHopperTest extends TestbedTest {
                     b.getLinearVelocity().addLocal(VEL_INCREMENT_X, 0);
                 }
                 break;
-            //Clear velocities
+            //Add negative vel
             case 'c':
                 for (Body b : m_hopper.getBodies())  {
                     b.getLinearVelocity().addLocal(-VEL_INCREMENT_X, 0);
@@ -165,6 +171,24 @@ public class BipedHopperTest extends TestbedTest {
                     b.setAngularVelocity(b.getAngularVelocity() + ANG_VEL_INCREMENT);
                 }
                 break;
+
+            //Toggle avatar-following for camera
+            case 'z':
+                m_followAvatar = !m_followAvatar;
+                break;
+
+            //Pause/play
+            case 't':
+                getModel().getSettings().pause = !getModel().getSettings().pause;
+                break;
+
+            //Step
+            case 'y':
+                getModel().getSettings().singleStep = true;
+                if (!getModel().getSettings().pause)
+                    getModel().getSettings().pause = true;
+                break;
+
 //            case 'a':
 //                m_hipJoint.setMotorSpeed(-m_motorSpeed);
 //                break;
@@ -186,6 +210,11 @@ public class BipedHopperTest extends TestbedTest {
     @Override
     public void step(TestbedSettings settings) {
         super.step(settings);
+
+        //Camera update
+        if (m_followAvatar && m_hopper != null) {
+            setCamera(m_hopper.getMainBody().getPosition());
+        }
 
         if (m_hopper != null) {
             addTextLine("Control State: " + m_hopper.getControlState());

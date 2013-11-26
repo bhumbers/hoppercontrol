@@ -33,7 +33,7 @@ public class HopperTestbedMain {
         model.addTest(new BipedHopperTest());
 
         TestbedFrame testbed = new TestbedFrame(model, panel, TestbedController.UpdateBehavior.UPDATE_CALLED);
-        testbed.setSize(1200, 600);
+        testbed.setSize(1200, 700);
         testbed.setVisible(true);
 
         //Biped hopper is only stable at >= 120 Hz, so match the GUI fps to that for convenience
