@@ -32,8 +32,14 @@ public class HopperTestbedMain {
         model.addTest(new WormTest());
         model.addTest(new BipedHopperTest());
 
-        JFrame testbed = new TestbedFrame(model, panel, TestbedController.UpdateBehavior.UPDATE_CALLED);
+        TestbedFrame testbed = new TestbedFrame(model, panel, TestbedController.UpdateBehavior.UPDATE_CALLED);
+        testbed.setSize(1200, 600);
         testbed.setVisible(true);
+
+        //Biped hopper is only stable at >= 120 Hz, so match the GUI fps to that for convenience
+        testbed.controller.setFrameRate(120);
+        testbed.model.getSettings().getSetting(TestbedSettings.Hz).value = 120;
+
         testbed.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 

@@ -53,9 +53,9 @@ import org.jbox2d.testbed.framework.j2d.TestbedSidePanel;
 @SuppressWarnings("serial")
 public class TestbedFrame extends JFrame {
 
-    private TestbedSidePanel side;
-    private TestbedModel model;
-    private TestbedController controller;
+    public TestbedSidePanel side;
+    public TestbedModel model;
+    public TestbedController controller;
 
     public TestbedFrame(final TestbedModel argModel, final TestbedPanel argPanel, TestbedController.UpdateBehavior behavior) {
         super("Hopper Testbed");

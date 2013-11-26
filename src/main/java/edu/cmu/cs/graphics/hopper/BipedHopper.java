@@ -37,14 +37,14 @@ public class BipedHopper {
 //    private final float HOP_SPRING_DAMPING_RATIO = 0.2f;
 
     private final float THRUST_SPRING_PROP_GAIN = 2000.0f;
-    private final float THRUST_SPRING_DRAG_GAIN = 20.0f;
+    private final float THRUST_SPRING_DRAG_GAIN = 15.0f;
     private final float THRUST_SPRING_EXPONENT = 1.1f;
     private final float HOP_SPRING_PROP_GAIN = 1000.0f;
-    private final float HOP_SPRING_DRAG_GAIN = 10.0f;
-    private final float HOP_SPRING_EXPONENT = 1.1f;
+    private final float HOP_SPRING_DRAG_GAIN = 15.0f;
+    private final float HOP_SPRING_EXPONENT = 1.0f;
 
     private final Vec2 CHASSIS_SIZE = new Vec2(2f, 0.5f);
-    private final float CHASSIS_DENSITY = 1.0f;
+    private final float CHASSIS_DENSITY = 2.0f;
 
     private final Vec2 HIP_SIZE = new Vec2(0.3f, 0.1f);
     private final float HIP_DENSITY = CHASSIS_DENSITY * 5;
@@ -132,6 +132,8 @@ public class BipedHopper {
 
     /** Returns body which is considered the root of this hopper */
     public Body getMainBody() {return m_chassis;}
+
+    public PrismaticJoint getActiveSpringJoint() {return m_springJoint[m_activeLegIdx];}
 
     /** Returns body which should be monitored for contact with ground in order to update
      * "inContact" flag */
@@ -388,7 +390,7 @@ public class BipedHopper {
         /////// LENGTHS /////////////////////////////////////////////////////////////////////////////
         //Retract idle leg, lengthen active for landing
         //(to make this gradual, use lerp on current value (hacky, but seems to work well))
-        float alpha = Math.min(1.0f, 1.0f * dt);
+        float alpha = Math.min(1.0f, 2.0f * dt);
 
         float idleLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH + IDLE_THRUST_LENGTH_DELTA;
         float activeLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH;
