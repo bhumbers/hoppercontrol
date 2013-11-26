@@ -63,12 +63,16 @@ public class SampledControlPrim extends ControlPrim {
     @Override
     public Control getControl(float primTime) {
         int timestep = getTimestep(primTime);
+        return getTimestepControl(timestep);
+    }
+
+    public Control getTimestepControl(int primStep) {
         //Return as usual if timestep is in range for which we have control values
-        if (timestep < controlsByTimestep.size())
-            return controlsByTimestep.get(timestep);
-        //Otherwise, clamp controls at start/end of available range if we have any
+        if (primStep < controlsByTimestep.size())
+            return controlsByTimestep.get(primStep);
+            //Otherwise, clamp controls at start/end of available range if we have any
         else if (!controlsByTimestep.isEmpty()) {
-            if (timestep <= 0)
+            if (primStep <= 0)
                 return controlsByTimestep.get(0);
             else
                 return controlsByTimestep.get(controlsByTimestep.size() - 1);
@@ -76,6 +80,18 @@ public class SampledControlPrim extends ControlPrim {
         //Otherwise, return no control
         else
             return null;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < controlsByTimestep.size(); i++) {
+            sb.append("Step ");
+            sb.append(i);
+            sb.append(": ");
+            sb.append(controlsByTimestep.toString());
+        }
+        return sb.toString();
     }
 
 }

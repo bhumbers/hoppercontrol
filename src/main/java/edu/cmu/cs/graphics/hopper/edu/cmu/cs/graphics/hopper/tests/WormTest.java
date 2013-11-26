@@ -89,7 +89,7 @@ public class WormTest extends TestbedTest {
         }
 
         int numJoints = 4;
-        float controlTimestep = 1.0f;
+        float controlTimestep = 0.1f;
 
         avatar = new Worm(numJoints);
         avatar.init(getWorld());
@@ -131,13 +131,15 @@ public class WormTest extends TestbedTest {
                     int nextPrimStep = controlPrim.getTimestep(primTime) + 1;
                     WormControl nextControl = null;
                     //Append a new control if currently none is specified (ie: we're at the end of the prim's sequence)
-                    if (nextPrimStep > controlPrim.getNumTimesteps())
-                        nextControl = new WormControl(avatar.getJoints().size());
+                    //The new control by default takes on prior control step's values
+                    if (nextPrimStep >= controlPrim.getNumTimesteps()) {
+                        nextControl = (WormControl)controlPrim.getTimestepControl(controlPrim.getNumTimesteps() - 1).duplicate();
+                    }
                     //Otherwise, we'll modify the existing control at this step
                     else
-                        nextControl = (WormControl)controlPrim.getControl(primTime);
+                        nextControl = (WormControl)controlPrim.getTimestepControl(nextPrimStep);
                     nextControl.targetLinkAngles[selectedWormJoint] += JOINT_INCREMENT;
-                    controlPrim.specifyControlForTime(nextControl, nextPrimStep);
+                    controlPrim.specifyControlForTimeStep(nextControl, nextPrimStep);
                     break;
                 }
             case 'w':
@@ -145,13 +147,15 @@ public class WormTest extends TestbedTest {
                 int nextPrimStep = controlPrim.getTimestep(primTime) + 1;
                 WormControl nextControl = null;
                 //Append a new control if currently none is specified (ie: we're at the end of the prim's sequence)
-                if (nextPrimStep > controlPrim.getNumTimesteps())
-                    nextControl = new WormControl(avatar.getJoints().size());
-                    //Otherwise, we'll modify the existing control at this step
+                //The new control by default takes on prior control step's values
+                if (nextPrimStep >= controlPrim.getNumTimesteps()) {
+                    nextControl = (WormControl)controlPrim.getTimestepControl(controlPrim.getNumTimesteps() - 1).duplicate();
+                }
+                //Otherwise, we'll modify the existing control at this step
                 else
-                    nextControl = (WormControl)controlPrim.getControl(primTime);
+                    nextControl = (WormControl)controlPrim.getTimestepControl(nextPrimStep);
                 nextControl.targetLinkAngles[selectedWormJoint] -= JOINT_INCREMENT;
-                controlPrim.specifyControlForTime(nextControl, nextPrimStep);
+                controlPrim.specifyControlForTimeStep(nextControl, nextPrimStep);
                 break;
             }
 
@@ -218,9 +222,9 @@ public class WormTest extends TestbedTest {
             primTime += dt;
         }
 
-//        if (avatar != null) {
-//            addTextLine("Control State: " + avatar.getControlState());
-//        }
+        if (avatar != null) {
+            addTextLine("Control: " + avatar.getCurrentControl().toString());
+        }
 
         //Update & apply control params for current time
         avatar.setCurrentControl(controlPrim.getControl(primTime));
