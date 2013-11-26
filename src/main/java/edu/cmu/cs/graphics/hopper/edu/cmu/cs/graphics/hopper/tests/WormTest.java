@@ -102,17 +102,19 @@ public class WormTest extends TestbedTest {
         //Terrain test
         Random r = new Random();
         r.setSeed(12345);
-        int terrainLength = 10;
+        int terrainLength = 100;
+        float terrainDeltaX = 2.0f;
+        float terrainMaxAmp = 4.0f;
         float y = 0.0f;
         List<Float> verts = new ArrayList<Float>(terrainLength);
         verts.add(0.01f);
         for (int i = 0; i < terrainLength; i++) {
-            y = 0.5f + 0.5f*(r.nextFloat());
+            y = terrainMaxAmp*(r.nextFloat());
             if (y < 0)
                 y = 0;
             verts.add(y);
         }
-        terrain = new TerrainProblem(verts, 1.0f);
+        terrain = new TerrainProblem(verts, terrainDeltaX);
         terrain.init(getWorld());
     }
 
@@ -121,7 +123,7 @@ public class WormTest extends TestbedTest {
         float VEL_INCREMENT_X = 0.1f;
         float ANG_VEL_INCREMENT = 0.1f;
 
-        float JOINT_INCREMENT = 0.1f;
+        float JOINT_INCREMENT = 0.5f;
 
         switch (key) {
             //Worm joint control

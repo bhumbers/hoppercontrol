@@ -64,8 +64,9 @@ public class BipedHopper {
 
     public float m_targetBodyVelXLegPlacementGain = TARGET_VELOCITY_LEG_PLACEMENT_GAIN;
 
-    protected float m_currSupportPeriod;             //running count of time length of current support period (or 0 if not in support)
-    protected float m_nextSupportPeriodEst;          //estimate of length of next period that active leg is touching ground
+    public float m_currFlightPeriod;
+    public float m_currSupportPeriod;             //running count of time length of current support period (or 0 if not in support)
+    public float m_nextSupportPeriodEst;          //estimate of length of next period that active leg is touching ground
 
     //Joints (arrays where each index corresponds to one of the legs)
     public RevoluteJoint m_hipJoint[];
@@ -97,8 +98,8 @@ public class BipedHopper {
     public float m_activeHipTorque = 0.0f;
     public float m_idleHipTorque = 0.0f;
 
-    protected int m_activeLegIdx;
-    protected int m_idleLegIdx;
+    public int m_activeLegIdx;
+    public int m_idleLegIdx;
 
     public BipedHopper() {
         m_inContact = false;
@@ -211,7 +212,7 @@ public class BipedHopper {
                 FixtureDef capFd = new FixtureDef();
                 capFd.density = FOOT_DENSITY;
                 capFd.shape = footShape;
-                capFd.friction = 1.0f; //high friction so we don't have to worry much about slipping
+                capFd.friction = 100.0f; //high friction so we don't have to worry much about slipping
                 capFd.filter.groupIndex = -1;
 
                 BodyDef bd = new BodyDef();
@@ -310,8 +311,10 @@ public class BipedHopper {
         switch (m_controlState) {
             case FLIGHT:
                 //Switch to load or compress state once we make contact with ground
-                if (m_inContact)
+                if (m_inContact)        {
                     m_controlState = ControlState.COMPRESS; //TODO: include "LOAD" phase as well?
+                    m_currFlightPeriod = 0.0f;
+                }
                 break;
             case COMPRESS:
                 //Switch to thrusting once at or past fully compressed spring
@@ -346,7 +349,8 @@ public class BipedHopper {
                 //Add thrust back by pushing down on spring
                 //TODO: Correct thrust for desired hop height
                 //m_thrustSpring[m_activeLegIdx].setLength(UPPER_LEG_DEFAULT_LENGTH + 0.3f);
-                m_targetThrustSpringLength[m_activeLegIdx] = UPPER_LEG_DEFAULT_LENGTH + ACTIVE_THRUST_LENGTH_DELTA;
+                float lengthAtThrustStart = m_targetThrustSpringLength[m_activeLegIdx];
+                m_targetThrustSpringLength[m_activeLegIdx] = lengthAtThrustStart + ACTIVE_THRUST_LENGTH_DELTA;
                 break;
             case UNLOAD:
                 //TODO
@@ -355,6 +359,8 @@ public class BipedHopper {
 
         if (m_inContact)
             m_currSupportPeriod += dt;
+        else
+            m_currFlightPeriod += dt;
 
         //Idle hip is constantly servoed throughout control cycle
         if (NUM_LEGS > 1)
@@ -391,7 +397,7 @@ public class BipedHopper {
         /////// LENGTHS /////////////////////////////////////////////////////////////////////////////
         //Retract idle leg, lengthen active for landing
         //(to make this gradual, use lerp on current value (hacky, but seems to work well))
-        float alpha = Math.min(1.0f, 2.0f * dt);
+        float alpha = 1.0f;//Math.min(1.0f, 2.0f * dt);
 
         float idleLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH + IDLE_THRUST_LENGTH_DELTA;
         float activeLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH;

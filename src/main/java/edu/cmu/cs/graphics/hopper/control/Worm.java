@@ -44,15 +44,16 @@ public class Worm extends Avatar {
             shape.setAsBox(LINK_LENGTH*0.5f, LINK_WIDTH*0.5f);
 
             Body link;
-            FixtureDef sd = new FixtureDef();
-            sd.density = 1.0f;
-            sd.shape = shape;
-            sd.filter.groupIndex = -1;
+            FixtureDef fd = new FixtureDef();
+            fd.density = 1.0f;
+            fd.friction = 2.0f;
+            fd.shape = shape;
+            fd.filter.groupIndex = -1;
             BodyDef bd = new BodyDef();
             bd.type = BodyType.DYNAMIC;
             bd.position.set(offset);
             link = world.createBody(bd);
-            link.createFixture(sd);
+            link.createFixture(fd);
             bodies.add(link);
 
             if (i > 0) {

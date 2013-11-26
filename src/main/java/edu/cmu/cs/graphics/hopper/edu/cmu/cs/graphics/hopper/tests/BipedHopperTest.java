@@ -2,6 +2,7 @@ package edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests;
 
 import edu.cmu.cs.graphics.hopper.BipedHopper;
 import edu.cmu.cs.graphics.hopper.VecUtils;
+import edu.cmu.cs.graphics.hopper.problems.TerrainProblem;
 import org.jbox2d.callbacks.ContactImpulse;
 import org.jbox2d.callbacks.DebugDraw;
 import org.jbox2d.collision.Manifold;
@@ -17,6 +18,9 @@ import org.jbox2d.testbed.framework.TestbedSettings;
 import org.jbox2d.testbed.framework.TestbedTest;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 
 /** Main scene setup and control update class for BipedHoppper
@@ -32,6 +36,8 @@ public class BipedHopperTest extends TestbedTest {
     static DecimalFormat numFormat = new DecimalFormat( "#,###,###,##0.000" );
 
     BipedHopper m_hopper;
+
+    TerrainProblem terrain;
 
     boolean m_followAvatar;
 
@@ -100,7 +106,7 @@ public class BipedHopperTest extends TestbedTest {
             FixtureDef groundFd = new FixtureDef();
 //            groundFd.restitution = 1.0f; //assume perfectly elastic bounces
             groundFd.density = 0.0f;
-            groundFd.friction = 1.0f;
+            groundFd.friction = 100.0f;
             groundFd.shape = shape;
             ground.createFixture(groundFd);
 
@@ -115,6 +121,24 @@ public class BipedHopperTest extends TestbedTest {
         m_hopper.init(getWorld());
 
         m_followAvatar = true;
+
+        //Terrain test
+        Random r = new Random();
+        r.setSeed(12345);
+        int terrainLength = 100;
+        float terrainDeltaX = 2.0f;
+        float terrainMaxAmp = 4.0f;
+        float y = 0.0f;
+        List<Float> verts = new ArrayList<Float>(terrainLength);
+        verts.add(0.01f);
+        for (int i = 0; i < terrainLength; i++) {
+            y = terrainMaxAmp*(r.nextFloat());
+            if (y < 0)
+                y = 0;
+            verts.add(y);
+        }
+        terrain = new TerrainProblem(verts, terrainDeltaX);
+        terrain.init(getWorld());
     }
 
     @Override
@@ -222,11 +246,16 @@ public class BipedHopperTest extends TestbedTest {
             addTextLine("Body Vel X: " + numFormat.format(m_hopper.getMainBody().getLinearVelocity().x));
             addTextLine("Target Body Vel X: " + numFormat.format(m_hopper.m_targetBodyVelX));
             addTextLine("Vel X Leg Gain: " + numFormat.format(m_hopper.m_targetBodyVelXLegPlacementGain));
+            addTextLine("Flight period: " + numFormat.format(m_hopper.m_currFlightPeriod));
+            addTextLine("Stance period: " + numFormat.format(m_hopper.m_currSupportPeriod));
+            addTextLine("Target Spring Length: " + numFormat.format(m_hopper.m_targetThrustSpringLength[m_hopper.m_activeLegIdx]));
         }
 
-        float hz = settings.getSetting(TestbedSettings.Hz).value;
-        float timeStep = hz > 0f ? 1f / hz : 0;
-        m_hopper.updateControl(timeStep);
+        if (settings.pause == false ||  settings.singleStep != false) {
+            float hz = settings.getSetting(TestbedSettings.Hz).value;
+            float timeStep = hz > 0f ? 1f / hz : 0;
+            m_hopper.updateControl(timeStep);
+        }
 
         drawHopperDebug();
     }
