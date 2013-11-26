@@ -1,9 +1,10 @@
 package edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests;
 
-import edu.cmu.cs.graphics.hopper.BipedHopper;
 import edu.cmu.cs.graphics.hopper.VecUtils;
-import edu.cmu.cs.graphics.hopper.control.TerrainProblem;
+import edu.cmu.cs.graphics.hopper.control.SampledControlPrim;
+import edu.cmu.cs.graphics.hopper.problems.TerrainProblem;
 import edu.cmu.cs.graphics.hopper.control.Worm;
+import edu.cmu.cs.graphics.hopper.control.WormControl;
 import org.jbox2d.callbacks.ContactImpulse;
 import org.jbox2d.callbacks.DebugDraw;
 import org.jbox2d.collision.Manifold;
@@ -21,7 +22,6 @@ import org.jbox2d.testbed.framework.TestbedSettings;
 import org.jbox2d.testbed.framework.TestbedTest;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -29,6 +29,11 @@ import java.util.Random;
 public class WormTest extends TestbedTest {
     Worm avatar;
     TerrainProblem terrain;
+    SampledControlPrim controlPrim;         //the control primitive that the user specifies
+
+    float primTime = 0.0f;                  //runtime of control primitive
+    float simTime = 0.0f;                  //total simulation time
+    int selectedWormJoint = 0;
 
     @Override
     public Long getTag(Body argBody) {
@@ -83,8 +88,16 @@ public class WormTest extends TestbedTest {
             ground.createFixture(shape, 0.0f);
         }
 
-        avatar = new Worm(3);
+        int numJoints = 4;
+        float controlTimestep = 1.0f;
+
+        avatar = new Worm(numJoints);
         avatar.init(getWorld());
+
+        selectedWormJoint = 0;
+
+        controlPrim = new SampledControlPrim(controlTimestep);
+        controlPrim.specifyControlForTime(new WormControl(numJoints), 0.0f);
 
         //Terrain test
         Random r = new Random();
@@ -94,7 +107,7 @@ public class WormTest extends TestbedTest {
         List<Float> verts = new ArrayList<Float>(terrainLength);
         verts.add(0.01f);
         for (int i = 0; i < terrainLength; i++) {
-            y = 1.0f + 0.5f*(r.nextFloat());
+            y = 0.5f + 0.5f*(r.nextFloat());
             if (y < 0)
                 y = 0;
             verts.add(y);
@@ -111,31 +124,50 @@ public class WormTest extends TestbedTest {
         float JOINT_INCREMENT = 0.1f;
 
         switch (key) {
-            //Worm joint #1 control (TODO: only control indirectly so we discretize correctly)
+            //Worm joint control
+            //Since control is discretized, we should only control the "next" target joint angles rather than current controls
             case 'q':
                 {
-                    Worm.WormControl control = (Worm.WormControl)avatar.getCurrentControl();
-                    control.targetLinkAngles[0] += JOINT_INCREMENT;
+                    int nextPrimStep = controlPrim.getTimestep(primTime) + 1;
+                    WormControl nextControl = null;
+                    //Append a new control if currently none is specified (ie: we're at the end of the prim's sequence)
+                    if (nextPrimStep > controlPrim.getNumTimesteps())
+                        nextControl = new WormControl(avatar.getJoints().size());
+                    //Otherwise, we'll modify the existing control at this step
+                    else
+                        nextControl = (WormControl)controlPrim.getControl(primTime);
+                    nextControl.targetLinkAngles[selectedWormJoint] += JOINT_INCREMENT;
+                    controlPrim.specifyControlForTime(nextControl, nextPrimStep);
                     break;
                 }
             case 'w':
             {
-                Worm.WormControl control = (Worm.WormControl)avatar.getCurrentControl();
-                control.targetLinkAngles[0] -= JOINT_INCREMENT;
+                int nextPrimStep = controlPrim.getTimestep(primTime) + 1;
+                WormControl nextControl = null;
+                //Append a new control if currently none is specified (ie: we're at the end of the prim's sequence)
+                if (nextPrimStep > controlPrim.getNumTimesteps())
+                    nextControl = new WormControl(avatar.getJoints().size());
+                    //Otherwise, we'll modify the existing control at this step
+                else
+                    nextControl = (WormControl)controlPrim.getControl(primTime);
+                nextControl.targetLinkAngles[selectedWormJoint] -= JOINT_INCREMENT;
+                controlPrim.specifyControlForTime(nextControl, nextPrimStep);
                 break;
             }
 
-            //Worm joint #2 control (TODO: only control indirectly so we discretize correctly)
+            //Change selected joint
             case 'o':
             {
-                Worm.WormControl control = (Worm.WormControl)avatar.getCurrentControl();
-                control.targetLinkAngles[1] += JOINT_INCREMENT;
+                selectedWormJoint--;
+                if (selectedWormJoint == -1)
+                    selectedWormJoint = avatar.getJoints().size() - 1;
                 break;
             }
             case 'p':
             {
-                Worm.WormControl control = (Worm.WormControl)avatar.getCurrentControl();
-                control.targetLinkAngles[1] -= JOINT_INCREMENT;
+                selectedWormJoint++;
+                if (selectedWormJoint == avatar.getJoints().size())
+                    selectedWormJoint = 0;
                 break;
             }
 
@@ -178,13 +210,21 @@ public class WormTest extends TestbedTest {
     public void step(TestbedSettings settings) {
         super.step(settings);
 
+        float hz = settings.getSetting(TestbedSettings.Hz).value;
+        float dt = hz > 0f ? 1f / hz : 0;
+
+        if (dt > 0) {
+            simTime += dt;
+            primTime += dt;
+        }
+
 //        if (avatar != null) {
 //            addTextLine("Control State: " + avatar.getControlState());
 //        }
 
-        float hz = settings.getSetting(TestbedSettings.Hz).value;
-        float timeStep = hz > 0f ? 1f / hz : 0;
-        avatar.update(timeStep);
+        //Update & apply control params for current time
+        avatar.setCurrentControl(controlPrim.getControl(primTime));
+        avatar.update(dt);
 
         drawAvatarDebug();
     }
@@ -221,7 +261,7 @@ public class WormTest extends TestbedTest {
             Transform bodyTransform = avatar.getMainBody().getTransform();
 
             //Show target pose for the worm
-            Worm.WormControl control = (Worm.WormControl)avatar.getCurrentControl();
+            WormControl control = (WormControl)avatar.getCurrentControl();
             List<Body> links = avatar.getBodies();
             List<? extends Joint> joints = avatar.getJoints();
             Vec2 jointPos = new Vec2();
@@ -234,6 +274,11 @@ public class WormTest extends TestbedTest {
                 VecUtils.rotateLocal(targetLinkDir, link.getAngle());
                 dd.drawSegment(jointPos, jointPos.add(targetLinkDir), new Color3f(1,0,0));
             }
+
+            //Indicate selected joint
+            RevoluteJoint selectedJoint = (RevoluteJoint)joints.get(selectedWormJoint);
+            selectedJoint.getAnchorA(jointPos);
+            dd.drawCircle(jointPos, 0.8f, new Color3f(1,1,0));
         }
     }
 }

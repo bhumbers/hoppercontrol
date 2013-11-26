@@ -1,4 +1,4 @@
-package edu.cmu.cs.graphics.hopper.control;
+package edu.cmu.cs.graphics.hopper.problems;
 
 import org.jbox2d.collision.shapes.ChainShape;
 import org.jbox2d.collision.shapes.PolygonShape;
@@ -13,7 +13,7 @@ import java.util.List;
  * Represents some problem space for an avatar to navigate
  * Terrain problems use heightmap representations
  */
-public class TerrainProblem {
+public class TerrainProblem extends Problem {
     protected List<Float> heights;
     protected List<Float> peakXDeltas;
 
@@ -34,6 +34,7 @@ public class TerrainProblem {
         this.peakXDeltas.addAll(peakXDeltas);
     }
 
+    @Override
     public void init(World world) {
         //TODO: Break up the single terrain body into multiple bodies for better performance on long terrains?
         BodyDef bd = new BodyDef();

@@ -19,14 +19,6 @@ public class Worm extends Avatar {
     private final float JOINT_PROP_GAIN = 50.0f;
     private final float JOINT_DRAG_GAIN = 5.0f;
 
-    public class WormControl extends Control {
-        public float[] targetLinkAngles;
-
-        WormControl(int numLinks) {
-            targetLinkAngles = new float[numLinks];
-        }
-    }
-
     int numLinks;
     protected WormControl currControl;
     protected List<RevoluteJoint> joints;

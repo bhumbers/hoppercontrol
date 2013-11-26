@@ -10,9 +10,26 @@ public class SampledControlPrim extends ControlPrim {
 
     /**  Creates a new control prim with given timestep size
      * timestepSize is the time that will be inserted between control samples, in seconds */
-    SampledControlPrim(float timestepSize) {
+    public SampledControlPrim(float timestepSize) {
         controlsByTimestep = new ArrayList<Control>();
         this.timestepSize = timestepSize;
+    }
+
+    @Override
+    public boolean isCompleted(float primTime) {
+        float endTime = timestepSize * controlsByTimestep.size();
+        return (primTime >= endTime);
+    }
+
+    /** Returns discrete control timestep index for given primitive runtime */
+    public int getTimestep(float primTime) {
+        int timestep = (int)(primTime / timestepSize);
+        return timestep;
+    }
+
+    /** Returns number of discrete control timesteps currently available in the primitive */
+    public int getNumTimesteps() {
+        return controlsByTimestep.size();
     }
 
     /** Sets control which should be active at given prim runtime. This will replace
@@ -21,15 +38,31 @@ public class SampledControlPrim extends ControlPrim {
      * @param primTime
      */
     public void specifyControlForTime(Control control, float primTime) {
-        int timestep = (int)(primTime / timestepSize);
-        while (controlsByTimestep.size() <= timestep) {
-            controlsByTimestep.add(null);
+        int timestep = getTimestep(primTime);
+        specifyControlForTimeStep(control, timestep);
+    }
+
+    /** Specific to discrete controls, allows setting control for a specific timestep rather than some continuous time */
+    public void specifyControlForTimeStep(Control control, int primStep) {
+
+        //If necessary. extend prior control up to the timestep
+        while (controlsByTimestep.size() <= primStep - 1)  {
+            Control priorControl = controlsByTimestep.get(controlsByTimestep.size() - 1);
+            Control priorControlDup = priorControl.duplicate();
+            controlsByTimestep.add(priorControlDup);
         }
+
+        //Then append/replace the given timestep with the control
+        if (primStep < controlsByTimestep.size())
+            controlsByTimestep.set(primStep, control);
+        else
+            controlsByTimestep.add(primStep, control);
+
     }
 
     @Override
     public Control getControl(float primTime) {
-        int timestep = (int)(primTime / timestepSize);
+        int timestep = getTimestep(primTime);
         //Return as usual if timestep is in range for which we have control values
         if (timestep < controlsByTimestep.size())
             return controlsByTimestep.get(timestep);
@@ -44,6 +77,5 @@ public class SampledControlPrim extends ControlPrim {
         else
             return null;
     }
-
 
 }
