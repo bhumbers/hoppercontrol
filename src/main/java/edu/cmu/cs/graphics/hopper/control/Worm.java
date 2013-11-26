@@ -46,7 +46,7 @@ public class Worm extends Avatar {
         final float LINK_WIDTH = 0.2f;
 
         //TODO: init bodies & joints for worm
-        Vec2 offset = new Vec2(0,LINK_WIDTH + 0.01f);
+        Vec2 offset = new Vec2(-LINK_LENGTH * numLinks,LINK_WIDTH + 0.01f);
         for (int i = 0; i < numLinks; i++) {
             PolygonShape shape = new PolygonShape();
             shape.setAsBox(LINK_LENGTH*0.5f, LINK_WIDTH*0.5f);

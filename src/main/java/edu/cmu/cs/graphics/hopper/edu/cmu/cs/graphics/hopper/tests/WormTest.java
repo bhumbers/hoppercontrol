@@ -2,6 +2,7 @@ package edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests;
 
 import edu.cmu.cs.graphics.hopper.BipedHopper;
 import edu.cmu.cs.graphics.hopper.VecUtils;
+import edu.cmu.cs.graphics.hopper.control.TerrainProblem;
 import edu.cmu.cs.graphics.hopper.control.Worm;
 import org.jbox2d.callbacks.ContactImpulse;
 import org.jbox2d.callbacks.DebugDraw;
@@ -19,11 +20,15 @@ import org.jbox2d.dynamics.joints.RevoluteJoint;
 import org.jbox2d.testbed.framework.TestbedSettings;
 import org.jbox2d.testbed.framework.TestbedTest;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 /** Used for debugging Worm avatar */
 public class WormTest extends TestbedTest {
     Worm avatar;
+    TerrainProblem terrain;
 
     @Override
     public Long getTag(Body argBody) {
@@ -80,6 +85,22 @@ public class WormTest extends TestbedTest {
 
         avatar = new Worm(3);
         avatar.init(getWorld());
+
+        //Terrain test
+        Random r = new Random();
+        r.setSeed(12345);
+        int terrainLength = 10;
+        float y = 0.0f;
+        List<Float> verts = new ArrayList<Float>(terrainLength);
+        verts.add(0.01f);
+        for (int i = 0; i < terrainLength; i++) {
+            y = 1.0f + 0.5f*(r.nextFloat());
+            if (y < 0)
+                y = 0;
+            verts.add(y);
+        }
+        terrain = new TerrainProblem(verts, 1.0f);
+        terrain.init(getWorld());
     }
 
     @Override
