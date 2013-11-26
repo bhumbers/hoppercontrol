@@ -1,6 +1,7 @@
 package edu.cmu.cs.graphics.hopper;
 
 import edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests.BipedHopperTest;
+import edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests.WormTest;
 import org.jbox2d.testbed.framework.*;
 import org.jbox2d.testbed.framework.j2d.TestPanelJ2D;
 
@@ -28,6 +29,7 @@ public class HopperTestbedMain {
         TestbedPanel panel = new TestPanelJ2D(model);
 
         //TestList.populateModel(model);
+        model.addTest(new WormTest());
         model.addTest(new BipedHopperTest());
 
         JFrame testbed = new TestbedFrame(model, panel, TestbedController.UpdateBehavior.UPDATE_CALLED);
