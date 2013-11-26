@@ -233,7 +233,44 @@ public class BipedHopperTest extends TestbedTest {
 
     @Override
     public void step(TestbedSettings settings) {
-        super.step(settings);
+//        super.step(settings); //DISABLED... we're going to straight up replace this call...
+
+        float hz = settings.getSetting(TestbedSettings.Hz).value;
+        float timeStep = hz > 0f ? 1f / hz : 0;
+        if (settings.singleStep && !settings.pause) {
+            settings.pause = true;
+        }
+
+        if (settings.pause) {
+            if (settings.singleStep) {
+                settings.singleStep = false;
+            } else {
+                timeStep = 0;
+            }
+        }
+
+        m_world.setAllowSleep(settings.getSetting(TestbedSettings.AllowSleep).enabled);
+        m_world.setWarmStarting(settings.getSetting(TestbedSettings.WarmStarting).enabled);
+        m_world.setSubStepping(settings.getSetting(TestbedSettings.SubStepping).enabled);
+        m_world.setContinuousPhysics(settings.getSetting(TestbedSettings.ContinuousCollision).enabled);
+
+        pointCount = 0;
+
+        //TEST: Try to match sim-time to real-time by running enough updates to fill the model's update rate
+        int stepsToRun = 0;
+        if (timeStep > 0)
+            stepsToRun = (int)Math.max(1, (1/model.getTargetFps()) / timeStep);
+
+        for (int i = 0; i < stepsToRun; i++) {
+            //Sim update
+            m_world.step(timeStep, settings.getSetting(TestbedSettings.VelocityIterations).value,
+                    settings.getSetting(TestbedSettings.PositionIterations).value);
+
+            //Control update
+            m_hopper.updateControl(timeStep);
+        }
+
+        updateDrawing(settings);
 
         //Camera update
         if (m_followAvatar && m_hopper != null) {
@@ -247,14 +284,8 @@ public class BipedHopperTest extends TestbedTest {
             addTextLine("Target Body Vel X: " + numFormat.format(m_hopper.m_targetBodyVelX));
             addTextLine("Vel X Leg Gain: " + numFormat.format(m_hopper.m_targetBodyVelXLegPlacementGain));
             addTextLine("Flight period: " + numFormat.format(m_hopper.m_currFlightPeriod));
-            addTextLine("Stance period: " + numFormat.format(m_hopper.m_currSupportPeriod));
+            addTextLine("Stance period: " + numFormat.format(m_hopper.m_currStancePeriod));
             addTextLine("Target Spring Length: " + numFormat.format(m_hopper.m_targetThrustSpringLength[m_hopper.m_activeLegIdx]));
-        }
-
-        if (settings.pause == false ||  settings.singleStep != false) {
-            float hz = settings.getSetting(TestbedSettings.Hz).value;
-            float timeStep = hz > 0f ? 1f / hz : 0;
-            m_hopper.updateControl(timeStep);
         }
 
         drawHopperDebug();

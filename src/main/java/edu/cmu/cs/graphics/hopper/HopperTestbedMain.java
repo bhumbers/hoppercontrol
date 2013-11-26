@@ -36,9 +36,11 @@ public class HopperTestbedMain {
         testbed.setSize(1200, 700);
         testbed.setVisible(true);
 
-        //Biped hopper is only stable at >= 120 Hz, so match the GUI fps to that for convenience
-        testbed.controller.setFrameRate(10000);
-        testbed.model.getSettings().getSetting(TestbedSettings.Hz).value = 10000;
+        //Biped hopper is only stable at short timesteps
+        int targetFps = 50;
+        int targetHz =  targetFps * 20;
+        testbed.controller.setFrameRate(targetFps);
+        testbed.model.getSettings().getSetting(TestbedSettings.Hz).value = targetHz;
 
         testbed.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }

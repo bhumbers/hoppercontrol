@@ -22,12 +22,12 @@ public class BipedHopper {
 
     final int NUM_LEGS = 2;
 
-    private final float HIP_PROP_GAIN = 500.0f;
-    private final float HIP_DRAG_GAIN = 200.0f;
+    private final float HIP_PROP_GAIN = 5000.0f;
+    private final float HIP_DRAG_GAIN = 500.0f;
 
     private final float TARGET_VELOCITY_LEG_PLACEMENT_GAIN = 0.1f;
 
-    private final float ACTIVE_THRUST_LENGTH_DELTA = 0.0f;  //push down on spring during thrust
+    private final float ACTIVE_THRUST_LENGTH_DELTA = 0.002f;  //push down on spring during thrust
     private final float IDLE_THRUST_LENGTH_DELTA = -2.5f;   //tuck away
 
 //    private final float THRUST_SPRING_FREQUENCY = 50.0f; //Hz
@@ -35,11 +35,11 @@ public class BipedHopper {
 //    private final float HOP_SPRING_FREQUENCY = 20.0f; //Hz
 //    private final float HOP_SPRING_DAMPING_RATIO = 0.2f;
 
-    private final float THRUST_SPRING_PROP_GAIN = 2000.0f;
-    private final float THRUST_SPRING_DRAG_GAIN = 15.0f;
+    private final float THRUST_SPRING_PROP_GAIN = 20000.0f;
+    private final float THRUST_SPRING_DRAG_GAIN = 200.0f;
     private final float THRUST_SPRING_EXPONENT = 1.1f;
-    private final float HOP_SPRING_PROP_GAIN = 1000.0f;
-    private final float HOP_SPRING_DRAG_GAIN = 15.0f;
+    private final float HOP_SPRING_PROP_GAIN = 5000.0f;
+    private final float HOP_SPRING_DRAG_GAIN = 100.0f;
     private final float HOP_SPRING_EXPONENT = 1.0f;
 
     private final Vec2 CHASSIS_SIZE = new Vec2(2f, 0.5f);
@@ -65,8 +65,8 @@ public class BipedHopper {
     public float m_targetBodyVelXLegPlacementGain = TARGET_VELOCITY_LEG_PLACEMENT_GAIN;
 
     public float m_currFlightPeriod;
-    public float m_currSupportPeriod;             //running count of time length of current support period (or 0 if not in support)
-    public float m_nextSupportPeriodEst;          //estimate of length of next period that active leg is touching ground
+    public float m_currStancePeriod;             //running count of time length of current support period (or 0 if not in support)
+    public float m_nextStancePeriodEst;          //estimate of length of next period that active leg is touching ground
 
     //Joints (arrays where each index corresponds to one of the legs)
     public RevoluteJoint m_hipJoint[];
@@ -109,8 +109,9 @@ public class BipedHopper {
         m_bodyPitch = 0.0f;
         m_activeLegIdx = 0; m_idleLegIdx = 1;
 
-        m_currSupportPeriod = 0.0f;
-        m_nextSupportPeriodEst = 1.0f; //TODO: What's a reasonable init value for this?
+        m_currFlightPeriod = 0.0f;
+        m_currStancePeriod = 0.0f;
+        m_nextStancePeriodEst = 1.0f; //TODO: What's a reasonable init value for this?
 
         m_bodies = new ArrayList<Body>();
         m_hip = new Body[NUM_LEGS];
@@ -313,7 +314,7 @@ public class BipedHopper {
                 //Switch to load or compress state once we make contact with ground
                 if (m_inContact)        {
                     m_controlState = ControlState.COMPRESS; //TODO: include "LOAD" phase as well?
-                    m_currFlightPeriod = 0.0f;
+                    m_currStancePeriod = 0.0f;
                 }
                 break;
             case COMPRESS:
@@ -325,9 +326,9 @@ public class BipedHopper {
                 //Switch to flight once we leave the ground
                 if (m_inContact == false) {
                     m_controlState = ControlState.FLIGHT;
-                    m_nextSupportPeriodEst = m_currSupportPeriod; //estimate next support from current
-                    m_currSupportPeriod = 0.0f;
+                    m_nextStancePeriodEst = m_currStancePeriod; //estimate next support from current
                     swapActiveLeg();
+                    m_currFlightPeriod = 0.0f;
                 }
                 break;
         }
@@ -358,7 +359,7 @@ public class BipedHopper {
         }
 
         if (m_inContact)
-            m_currSupportPeriod += dt;
+            m_currStancePeriod += dt;
         else
             m_currFlightPeriod += dt;
 
@@ -397,7 +398,7 @@ public class BipedHopper {
         /////// LENGTHS /////////////////////////////////////////////////////////////////////////////
         //Retract idle leg, lengthen active for landing
         //(to make this gradual, use lerp on current value (hacky, but seems to work well))
-        float alpha = 1.0f;//Math.min(1.0f, 2.0f * dt);
+        float alpha = Math.min(1.0f, 5.0f * dt);
 
         float idleLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH + IDLE_THRUST_LENGTH_DELTA;
         float activeLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH;
@@ -414,7 +415,7 @@ public class BipedHopper {
         /////// ANGLE /////////////////////////////////////////////////////////////////////////////
         //Set leg position using hip based on desired landing location
         float deltaFromTargetVel = m_bodyVel.x - m_targetBodyVelX;
-        float desiredLandingOffsetX = (0.5f * m_bodyVel.x * m_nextSupportPeriodEst) + (m_targetBodyVelXLegPlacementGain * deltaFromTargetVel);
+        float desiredLandingOffsetX = (0.5f * m_bodyVel.x * m_nextStancePeriodEst) + (m_targetBodyVelXLegPlacementGain * deltaFromTargetVel);
 
         //Bound to some reasonable range
         float maxAllowedOffsetX = 0.5f * activeLegTerminalLength;
