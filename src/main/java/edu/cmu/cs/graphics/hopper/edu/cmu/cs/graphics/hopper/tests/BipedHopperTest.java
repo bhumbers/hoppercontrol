@@ -1,19 +1,17 @@
 package edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests;
 
-import edu.cmu.cs.graphics.hopper.BipedHopper;
+import edu.cmu.cs.graphics.hopper.control.BipedHopper;
 import edu.cmu.cs.graphics.hopper.VecUtils;
+import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
 import edu.cmu.cs.graphics.hopper.problems.TerrainProblem;
 import org.jbox2d.callbacks.ContactImpulse;
 import org.jbox2d.callbacks.DebugDraw;
 import org.jbox2d.collision.Manifold;
-import org.jbox2d.collision.shapes.CircleShape;
 import org.jbox2d.collision.shapes.EdgeShape;
-import org.jbox2d.collision.shapes.PolygonShape;
 import org.jbox2d.common.*;
 import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.contacts.Contact;
 import org.jbox2d.dynamics.joints.*;
-import org.jbox2d.testbed.framework.TestbedSetting;
 import org.jbox2d.testbed.framework.TestbedSettings;
 import org.jbox2d.testbed.framework.TestbedTest;
 
@@ -154,25 +152,25 @@ public class BipedHopperTest extends TestbedTest {
         switch (key) {
             //Modify target velocity
             case 'd':
-                m_hopper.m_targetBodyVelX += TARGET_VEL_INCREMENT_X;
+                ((BipedHopperControl)m_hopper.getCurrentControl()).m_targetBodyVelX += TARGET_VEL_INCREMENT_X;
                 break;
             case 'a':
-                m_hopper.m_targetBodyVelX -= TARGET_VEL_INCREMENT_X;
+                ((BipedHopperControl)m_hopper.getCurrentControl()).m_targetBodyVelX -= TARGET_VEL_INCREMENT_X;
                 break;
 
             //Modify thrust (hop height) magnitude
             case 'w':
-                m_hopper.m_activeThrustDelta += THRUST_INCREMENT;
+                ((BipedHopperControl)m_hopper.getCurrentControl()).m_activeThrustDelta += THRUST_INCREMENT;
                 break;
             case 's':
-                m_hopper.m_activeThrustDelta -= THRUST_INCREMENT;
+                ((BipedHopperControl)m_hopper.getCurrentControl()).m_activeThrustDelta -= THRUST_INCREMENT;
                 break;
 
             case 'p':
-                m_hopper.m_targetBodyVelXLegPlacementGain += LEG_PLACEMENT_GAIN_INCREMENT;
+                ((BipedHopperControl)m_hopper.getCurrentControl()).m_targetBodyVelXLegPlacementGain += LEG_PLACEMENT_GAIN_INCREMENT;
                 break;
             case 'o':
-                m_hopper.m_targetBodyVelXLegPlacementGain -= LEG_PLACEMENT_GAIN_INCREMENT;
+                ((BipedHopperControl)m_hopper.getCurrentControl()).m_targetBodyVelXLegPlacementGain -= LEG_PLACEMENT_GAIN_INCREMENT;
                 break;
 
             //Clear velocities
@@ -278,7 +276,7 @@ public class BipedHopperTest extends TestbedTest {
                     settings.getSetting(TestbedSettings.PositionIterations).value);
 
             //Control update
-            m_hopper.updateControl(timeStep);
+            m_hopper.update(timeStep);
         }
 
         updateDrawing(settings);
@@ -292,9 +290,9 @@ public class BipedHopperTest extends TestbedTest {
             addTextLine("Control State: " + m_hopper.getControlState());
             addTextLine("Active Leg Spring Compression: " + numFormat.format(m_hopper.getActiveSpringJoint().getJointTranslation()));
             addTextLine("Body Vel X: " + numFormat.format(m_hopper.getMainBody().getLinearVelocity().x));
-            addTextLine("Target Body Vel X: " + numFormat.format(m_hopper.m_targetBodyVelX));
-            addTextLine("Vel X Leg Gain: " + numFormat.format(m_hopper.m_targetBodyVelXLegPlacementGain));
-            addTextLine("Thrust offset: " + numFormat.format(m_hopper.m_activeThrustDelta));
+            addTextLine("Target Body Vel X: " + numFormat.format(((BipedHopperControl)m_hopper.getCurrentControl()).m_targetBodyVelX));
+            addTextLine("Vel X Leg Gain: " + numFormat.format(((BipedHopperControl)m_hopper.getCurrentControl()).m_targetBodyVelXLegPlacementGain));
+            addTextLine("Thrust offset: " + numFormat.format(((BipedHopperControl)m_hopper.getCurrentControl()).m_activeThrustDelta));
             addTextLine("Flight period: " + numFormat.format(m_hopper.m_currFlightPeriod));
             addTextLine("Stance period: " + numFormat.format(m_hopper.m_currStancePeriod));
             addTextLine("Target Spring Length: " + numFormat.format(m_hopper.m_targetThrustSpringLength[m_hopper.m_activeLegIdx]));

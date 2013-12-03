@@ -1,16 +1,19 @@
-package edu.cmu.cs.graphics.hopper;
+package edu.cmu.cs.graphics.hopper.control;
 
 import org.jbox2d.collision.shapes.CircleShape;
 import org.jbox2d.collision.shapes.PolygonShape;
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.joints.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /** Holds body state and runs control logic for biped hopper avatar */
-public class BipedHopper {
+public class BipedHopper extends Avatar {
+    private static final Logger log = LoggerFactory.getLogger(BipedHopper.class);
 
     public enum ControlState {
         FLIGHT,
@@ -24,11 +27,6 @@ public class BipedHopper {
 
     private final float HIP_PROP_GAIN = 5000.0f;
     private final float HIP_DRAG_GAIN = 500.0f;
-
-    private final float TARGET_VELOCITY_LEG_PLACEMENT_GAIN = 0.1f;
-
-    private final float DEFAULT_ACTIVE_THRUST_LENGTH_DELTA = 0.002f;  //push down on spring during thrust
-    private final float IDLE_THRUST_LENGTH_DELTA = -2.5f;   //tuck away
 
 //    private final float THRUST_SPRING_FREQUENCY = 50.0f; //Hz
 //    private final float THRUST_SPRING_DAMPING_RATIO = 0.8f;
@@ -62,8 +60,6 @@ public class BipedHopper {
     public Vec2 m_bodyVel;
     public float m_bodyPitch;
 
-    public float m_targetBodyVelXLegPlacementGain = TARGET_VELOCITY_LEG_PLACEMENT_GAIN;
-
     public float m_currFlightPeriod;
     public float m_currStancePeriod;             //running count of time length of current support period (or 0 if not in support)
     public float m_nextStancePeriodEst;          //estimate of length of next period that active leg is touching ground
@@ -71,9 +67,7 @@ public class BipedHopper {
     //Joints (arrays where each index corresponds to one of the legs)
     public RevoluteJoint m_hipJoint[];
     public PrismaticJoint m_thrustJoint[];    //keeps hip & knee aligned along leg direction
-//    public DistanceJoint m_thrustSpring[];       //used to control leg length & excite lower leg spring during takeoff thrust
     public PrismaticJoint m_springJoint[];     //keeps knee & foot aligned along leg direction
-//    public DistanceJoint m_hopSpring[];          //stores & returns bounce energy for hopper
 
     //Since Box2D uses initial joint lengths as reference 0 translation, we need to store that
     //value if we'd like to use "absolute" lengths of a joint
@@ -86,16 +80,16 @@ public class BipedHopper {
     protected Body m_knee[];
     protected Body m_foot[];
     protected List<Body> m_bodies;
+    protected List<? extends Joint> m_joints;
 
-    public float m_activeThrustDelta = DEFAULT_ACTIVE_THRUST_LENGTH_DELTA;        //offset to thrust piston used during thrust phase (affects hopping height)
-    public float m_targetBodyVelX = 0.0f;
-    public float m_targetBodyPitch = 0.0f;         //target angle of main hopper body *relative to world coordinate frame*
+    protected BipedHopperControl m_currControl;
+
     public float m_targetActiveHipAngle = 0.0f;     //target angle of active hip relative to body
     public float m_targetdIdleHipAngle = 0.0f;      //target angle of idle hip relative to body
     public float m_targetThrustSpringLength[];      //target lengths of upper leg thrust spring for each leg
-    public float m_targetHopSpringLength[];         //target lengths of lower leg hoppiung spring for each leg
+    public float m_targetHopSpringLength[];         //target lengths of lower leg hopping spring for each leg
 
-    //Torques/forces on various joints (readablel; modified internally)
+    //Torques/forces on various joints (readable; modified internally)
     public float m_activeHipTorque = 0.0f;
     public float m_idleHipTorque = 0.0f;
 
@@ -115,6 +109,7 @@ public class BipedHopper {
         m_nextStancePeriodEst = 1.0f; //TODO: What's a reasonable init value for this?
 
         m_bodies = new ArrayList<Body>();
+        m_joints = new ArrayList<Joint>();
         m_hip = new Body[NUM_LEGS];
         m_knee = new Body[NUM_LEGS];
         m_foot = new Body[NUM_LEGS];
@@ -129,12 +124,18 @@ public class BipedHopper {
 
         m_targetThrustSpringLength = new float[NUM_LEGS];
         m_targetHopSpringLength = new float[NUM_LEGS];
+
+        //Default control
+        setCurrentControl(new BipedHopperControl());
     }
 
-    /** Returns list of all bodies belonging to the hopper */
+    @Override
     public List<Body> getBodies() {return m_bodies;}
 
-    /** Returns body which is considered the root of this hopper */
+    @Override
+    public List<? extends Joint> getJoints() {return m_joints;}
+
+    @Override
     public Body getMainBody() {return m_chassis;}
 
     public PrismaticJoint getActiveSpringJoint() {return m_springJoint[m_activeLegIdx];}
@@ -148,6 +149,7 @@ public class BipedHopper {
     public void setInContact(boolean val) {m_inContact = val;}
     public boolean getInContact() {return m_inContact;}
 
+    @Override
     public void init(World world) {
         m_offset.set(0.0f, 6.0f);
 
@@ -301,8 +303,23 @@ public class BipedHopper {
         }
     }
 
-    /** Updates control & actuation for this hopper based on given simulation timestep dt (in seconds) */
-    public void updateControl(float dt) {
+    @Override
+    public void setCurrentControl(Control control) {
+        //Not ideal OO design, but such is life
+        if (!(control instanceof  BipedHopperControl)) {
+            log.error("Tried to assign a non-BipedHopperControl object to a BipedHopper avatar");
+            return;
+        }
+
+        this.m_currControl = (BipedHopperControl)control;
+    }
+
+    public Control getCurrentControl() {
+        return m_currControl;
+    }
+
+    @Override
+    public void update(float dt) {
         //Update sensor values
         if (m_springJoint != null)
             m_springVel = m_springJoint[m_activeLegIdx].getJointSpeed();
@@ -352,7 +369,7 @@ public class BipedHopper {
                 //TODO: Correct thrust for desired hop height
                 //m_thrustSpring[m_activeLegIdx].setLength(UPPER_LEG_DEFAULT_LENGTH + 0.3f);
                 float lengthAtThrustStart = m_targetThrustSpringLength[m_activeLegIdx];
-                m_targetThrustSpringLength[m_activeLegIdx] = lengthAtThrustStart + m_activeThrustDelta;
+                m_targetThrustSpringLength[m_activeLegIdx] = lengthAtThrustStart + m_currControl.m_activeThrustDelta;
                 break;
             case UNLOAD:
                 //TODO
@@ -384,7 +401,7 @@ public class BipedHopper {
     }
 
     protected void servoBodyPitch() {
-        float targetActiveHipAngle = m_bodyPitch - m_targetBodyPitch;
+        float targetActiveHipAngle = m_bodyPitch - m_currControl.m_targetBodyPitch;
         m_activeHipTorque = servoTowardAngle(m_hipJoint[m_activeLegIdx], targetActiveHipAngle, HIP_PROP_GAIN, HIP_DRAG_GAIN);
     }
 
@@ -401,7 +418,7 @@ public class BipedHopper {
         //(to make this gradual, use lerp on current value (hacky, but seems to work well))
         float alpha = Math.min(1.0f, 5.0f * dt);
 
-        float idleLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH + IDLE_THRUST_LENGTH_DELTA;
+        float idleLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH + m_currControl.m_idleThrustDelta;
         float activeLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH;
 
 //        if (NUM_LEGS > 1)
@@ -415,8 +432,8 @@ public class BipedHopper {
 
         /////// ANGLE /////////////////////////////////////////////////////////////////////////////
         //Set leg position using hip based on desired landing location
-        float deltaFromTargetVel = m_bodyVel.x - m_targetBodyVelX;
-        float desiredLandingOffsetX = (0.5f * m_bodyVel.x * m_nextStancePeriodEst) + (m_targetBodyVelXLegPlacementGain * deltaFromTargetVel);
+        float deltaFromTargetVel = m_bodyVel.x - m_currControl.m_targetBodyVelX;
+        float desiredLandingOffsetX = (0.5f * m_bodyVel.x * m_nextStancePeriodEst) + (m_currControl.m_targetBodyVelXLegPlacementGain * deltaFromTargetVel);
 
         //Bound to some reasonable range
         float maxAllowedOffsetX = 0.5f * activeLegTerminalLength;

@@ -2,13 +2,7 @@ package edu.cmu.cs.graphics.hopper.control;
 
 import java.text.DecimalFormat;
 
-/**
- * Created with IntelliJ IDEA.
- * User: bhumbers
- * Date: 11/26/13
- * Time: 10:43 AM
- * To change this template use File | Settings | File Templates.
- */
+/** Control specific to a Worm avatar */
 public class WormControl extends Control {
     public float[] targetLinkAngles;
 
