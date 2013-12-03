@@ -144,24 +144,35 @@ public class BipedHopperTest extends TestbedTest {
     @Override
     public void keyPressed(char key, int argKeyCode) {
         float TARGET_VEL_INCREMENT_X = 0.5f;
-        float BLAH_INCREMENT = 0.01f;
+        float THRUST_INCREMENT = 0.001f;
+        float LEG_PLACEMENT_GAIN_INCREMENT = 0.01f;
         float VEL_INCREMENT_X = 0.1f;
         float ANG_VEL_INCREMENT = 0.1f;
 
+        //TODO: Don't modify control vals directly; just set for next discrete update
+
         switch (key) {
             //Modify target velocity
-            case 'w':
+            case 'd':
                 m_hopper.m_targetBodyVelX += TARGET_VEL_INCREMENT_X;
                 break;
-            case 'q':
+            case 'a':
                 m_hopper.m_targetBodyVelX -= TARGET_VEL_INCREMENT_X;
                 break;
 
+            //Modify thrust (hop height) magnitude
+            case 'w':
+                m_hopper.m_activeThrustDelta += THRUST_INCREMENT;
+                break;
+            case 's':
+                m_hopper.m_activeThrustDelta -= THRUST_INCREMENT;
+                break;
+
             case 'p':
-                m_hopper.m_targetBodyVelXLegPlacementGain += BLAH_INCREMENT;
+                m_hopper.m_targetBodyVelXLegPlacementGain += LEG_PLACEMENT_GAIN_INCREMENT;
                 break;
             case 'o':
-                m_hopper.m_targetBodyVelXLegPlacementGain -= BLAH_INCREMENT;
+                m_hopper.m_targetBodyVelXLegPlacementGain -= LEG_PLACEMENT_GAIN_INCREMENT;
                 break;
 
             //Clear velocities
@@ -283,6 +294,7 @@ public class BipedHopperTest extends TestbedTest {
             addTextLine("Body Vel X: " + numFormat.format(m_hopper.getMainBody().getLinearVelocity().x));
             addTextLine("Target Body Vel X: " + numFormat.format(m_hopper.m_targetBodyVelX));
             addTextLine("Vel X Leg Gain: " + numFormat.format(m_hopper.m_targetBodyVelXLegPlacementGain));
+            addTextLine("Thrust offset: " + numFormat.format(m_hopper.m_activeThrustDelta));
             addTextLine("Flight period: " + numFormat.format(m_hopper.m_currFlightPeriod));
             addTextLine("Stance period: " + numFormat.format(m_hopper.m_currStancePeriod));
             addTextLine("Target Spring Length: " + numFormat.format(m_hopper.m_targetThrustSpringLength[m_hopper.m_activeLegIdx]));

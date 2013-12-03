@@ -29,8 +29,8 @@ public class HopperTestbedMain {
         TestbedPanel panel = new TestPanelJ2D(model);
 
         //TestList.populateModel(model);
-        model.addTest(new WormTest());
         model.addTest(new BipedHopperTest());
+        model.addTest(new WormTest());
 
         TestbedFrame testbed = new TestbedFrame(model, panel, TestbedController.UpdateBehavior.UPDATE_CALLED);
         testbed.setSize(1200, 700);

@@ -27,7 +27,7 @@ public class BipedHopper {
 
     private final float TARGET_VELOCITY_LEG_PLACEMENT_GAIN = 0.1f;
 
-    private final float ACTIVE_THRUST_LENGTH_DELTA = 0.002f;  //push down on spring during thrust
+    private final float DEFAULT_ACTIVE_THRUST_LENGTH_DELTA = 0.002f;  //push down on spring during thrust
     private final float IDLE_THRUST_LENGTH_DELTA = -2.5f;   //tuck away
 
 //    private final float THRUST_SPRING_FREQUENCY = 50.0f; //Hz
@@ -87,6 +87,7 @@ public class BipedHopper {
     protected Body m_foot[];
     protected List<Body> m_bodies;
 
+    public float m_activeThrustDelta = DEFAULT_ACTIVE_THRUST_LENGTH_DELTA;        //offset to thrust piston used during thrust phase (affects hopping height)
     public float m_targetBodyVelX = 0.0f;
     public float m_targetBodyPitch = 0.0f;         //target angle of main hopper body *relative to world coordinate frame*
     public float m_targetActiveHipAngle = 0.0f;     //target angle of active hip relative to body
@@ -351,7 +352,7 @@ public class BipedHopper {
                 //TODO: Correct thrust for desired hop height
                 //m_thrustSpring[m_activeLegIdx].setLength(UPPER_LEG_DEFAULT_LENGTH + 0.3f);
                 float lengthAtThrustStart = m_targetThrustSpringLength[m_activeLegIdx];
-                m_targetThrustSpringLength[m_activeLegIdx] = lengthAtThrustStart + ACTIVE_THRUST_LENGTH_DELTA;
+                m_targetThrustSpringLength[m_activeLegIdx] = lengthAtThrustStart + m_activeThrustDelta;
                 break;
             case UNLOAD:
                 //TODO
