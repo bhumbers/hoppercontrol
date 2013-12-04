@@ -13,20 +13,28 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** A simple, stable worm-like avatar */
-public class Worm extends Avatar {
+public class Worm extends Avatar<WormControl> {
     private static final Logger log = LoggerFactory.getLogger(Worm.class);
 
     private final float JOINT_PROP_GAIN = 50.0f;
     private final float JOINT_DRAG_GAIN = 5.0f;
 
-    int numLinks;
-    protected WormControl currControl;
+    protected int numLinks;
+    protected float controlTimestep;
+    protected ControlProvider<WormControl> controlProvider;
+
     protected List<RevoluteJoint> joints;
     protected List<Body> bodies;
 
-    public Worm(int numLinks) {
+    protected float timeSinceControlStep;
+
+    public Worm(int numLinks, float controlTimestep) {
         this.numLinks = numLinks;
-        setCurrentControl(new WormControl(numLinks)); //default control
+        this.controlTimestep = controlTimestep;
+
+        //Default control provider
+        setControlProvider(new ControlProvider<WormControl>());
+        controlProvider.specifyControlForIndex(new WormControl(numLinks), 0);
     }
 
     @Override
@@ -83,27 +91,28 @@ public class Worm extends Avatar {
     }
 
     @Override
-    public void setCurrentControl(Control control) {
-        //Not ideal OO design, but such is life
-        if (!(control instanceof  WormControl)) {
-            log.error("Tried to assign a non-WormControl object to a Worm avatar");
-            return;
-        }
-
-        this.currControl = (WormControl)control;
+    public void setControlProvider(ControlProvider<WormControl> provider) {
+        this.controlProvider = provider;
     }
 
-    public Control getCurrentControl() {
-        return currControl;
+    public WormControl getCurrentControl() {
+        return controlProvider.getCurrControl();
     }
-
 
     @Override
     public void update(float dt) {
-        if (currControl != null) {
+        //Update to next control from provider if enough time has passed
+        if (timeSinceControlStep > controlTimestep) {
+            controlProvider.goToNextControl();
+            timeSinceControlStep = 0;
+        }
+
+        if (controlProvider.getCurrControl() != null) {
             for (int i = 0; i < joints.size(); i++) {
-                ControlUtils.servoTowardAngle(joints.get(i), currControl.targetLinkAngles[i], JOINT_PROP_GAIN, JOINT_DRAG_GAIN);
+                ControlUtils.servoTowardAngle(joints.get(i), controlProvider.getCurrControl().targetLinkAngles[i], JOINT_PROP_GAIN, JOINT_DRAG_GAIN);
             }
         }
+
+        timeSinceControlStep += dt;
     }
 }

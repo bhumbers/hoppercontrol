@@ -7,7 +7,7 @@ import org.jbox2d.dynamics.joints.Joint;
 import java.util.List;
 
 /** A controllable character */
-public abstract class Avatar {
+public abstract class Avatar<C extends Control> {
     /**Initializes physical simulation components of this avatar in given world */
     public abstract void init(World world);
 
@@ -20,10 +20,10 @@ public abstract class Avatar {
     /** Returns body which is considered the root of this avatar */
     public abstract Body getMainBody();
 
-    /** Sets control that will be employed by this avatar at next update */
-    public abstract void setCurrentControl(Control control);
+    /** Sets control provider used by this avatar */
+    public abstract void setControlProvider(ControlProvider<C> provider);
 
-    public abstract Control getCurrentControl();
+    public abstract C getCurrentControl();
 
     /**Applies any update logic (eg: control torques) for this avatar for a simulation timestep delta (in seconds) */
     public abstract void update(float dt);

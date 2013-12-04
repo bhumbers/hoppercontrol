@@ -3,6 +3,8 @@ package edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests;
 import edu.cmu.cs.graphics.hopper.control.BipedHopper;
 import edu.cmu.cs.graphics.hopper.VecUtils;
 import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
+import edu.cmu.cs.graphics.hopper.control.ControlProvider;
+import edu.cmu.cs.graphics.hopper.problems.ObstacleProblem;
 import edu.cmu.cs.graphics.hopper.problems.TerrainProblem;
 import org.jbox2d.callbacks.ContactImpulse;
 import org.jbox2d.callbacks.DebugDraw;
@@ -33,9 +35,13 @@ public class BipedHopperTest extends TestbedTest {
 
     static DecimalFormat numFormat = new DecimalFormat( "#,###,###,##0.000" );
 
-    BipedHopper m_hopper;
+    float simTime = 0.0f;                  //total simulation time
 
-    TerrainProblem terrain;
+    BipedHopper m_hopper;
+    ControlProvider<BipedHopperControl> provider;
+
+//    TerrainProblem terrain;
+    ObstacleProblem obstacleProb;
 
     boolean m_followAvatar;
 
@@ -118,25 +124,33 @@ public class BipedHopperTest extends TestbedTest {
         m_hopper = new BipedHopper();
         m_hopper.init(getWorld());
 
+        provider = new ControlProvider<BipedHopperControl>();
+        provider.specifyControlForIndex(new BipedHopperControl(), 0);
+        m_hopper.setControlProvider(provider);
+
         m_followAvatar = true;
 
-        //Terrain test
-        Random r = new Random();
-        r.setSeed(12345);
-        int terrainLength = 100;
-        float terrainDeltaX = 2.0f;
-        float terrainMaxAmp = 4.0f;
-        float y = 0.0f;
-        List<Float> verts = new ArrayList<Float>(terrainLength);
-        verts.add(0.01f);
-        for (int i = 0; i < terrainLength; i++) {
-            y = terrainMaxAmp*(r.nextFloat());
-            if (y < 0)
-                y = 0;
-            verts.add(y);
-        }
-        terrain = new TerrainProblem(verts, terrainDeltaX);
-        terrain.init(getWorld());
+//        //Terrain test
+//        Random r = new Random();
+//        r.setSeed(12345);
+//        int terrainLength = 100;
+//        float terrainDeltaX = 2.0f;
+//        float terrainMaxAmp = 4.0f;
+//        float y = 0.0f;
+//        List<Float> verts = new ArrayList<Float>(terrainLength);
+//        verts.add(0.01f);
+//        for (int i = 0; i < terrainLength; i++) {
+//            y = terrainMaxAmp*(r.nextFloat());
+//            if (y < 0)
+//                y = 0;
+//            verts.add(y);
+//        }
+//        terrain = new TerrainProblem(verts, terrainDeltaX);
+//        terrain.init(getWorld());
+
+        //Obstacle test
+        obstacleProb = new ObstacleProblem(1.0f, 2.0f);
+        obstacleProb.init(getWorld());
     }
 
     @Override
@@ -152,26 +166,50 @@ public class BipedHopperTest extends TestbedTest {
         switch (key) {
             //Modify target velocity
             case 'd':
-                ((BipedHopperControl)m_hopper.getCurrentControl()).m_targetBodyVelX += TARGET_VEL_INCREMENT_X;
-                break;
+                {
+                    BipedHopperControl nextControl = getNextControl();
+                    nextControl.m_targetBodyVelX += TARGET_VEL_INCREMENT_X;
+                    provider.specifyControlForIndex(nextControl, provider.CurrControlIdx() + 1);
+                    break;
+                }
             case 'a':
-                ((BipedHopperControl)m_hopper.getCurrentControl()).m_targetBodyVelX -= TARGET_VEL_INCREMENT_X;
+            {
+                BipedHopperControl nextControl = getNextControl();
+                nextControl.m_targetBodyVelX -= TARGET_VEL_INCREMENT_X;
+                provider.specifyControlForIndex(nextControl, provider.CurrControlIdx() + 1);
                 break;
+            }
 
             //Modify thrust (hop height) magnitude
             case 'w':
-                ((BipedHopperControl)m_hopper.getCurrentControl()).m_activeThrustDelta += THRUST_INCREMENT;
+            {
+                BipedHopperControl nextControl = getNextControl();
+                nextControl.m_activeThrustDelta += THRUST_INCREMENT;
+                provider.specifyControlForIndex(nextControl, provider.CurrControlIdx() + 1);
                 break;
+            }
             case 's':
-                ((BipedHopperControl)m_hopper.getCurrentControl()).m_activeThrustDelta -= THRUST_INCREMENT;
+            {
+                BipedHopperControl nextControl = getNextControl();
+                nextControl.m_activeThrustDelta -= THRUST_INCREMENT;
+                provider.specifyControlForIndex(nextControl, provider.CurrControlIdx() + 1);
                 break;
+            }
 
             case 'p':
-                ((BipedHopperControl)m_hopper.getCurrentControl()).m_targetBodyVelXLegPlacementGain += LEG_PLACEMENT_GAIN_INCREMENT;
+            {
+                BipedHopperControl nextControl = getNextControl();
+                nextControl.m_targetBodyVelXLegPlacementGain += LEG_PLACEMENT_GAIN_INCREMENT;
+                provider.specifyControlForIndex(nextControl, provider.CurrControlIdx() + 1);
                 break;
+            }
             case 'o':
-                ((BipedHopperControl)m_hopper.getCurrentControl()).m_targetBodyVelXLegPlacementGain -= LEG_PLACEMENT_GAIN_INCREMENT;
+            {
+                BipedHopperControl nextControl = getNextControl();
+                nextControl.m_targetBodyVelXLegPlacementGain -= LEG_PLACEMENT_GAIN_INCREMENT;
+                provider.specifyControlForIndex(nextControl, provider.CurrControlIdx() + 1);
                 break;
+            }
 
             //Clear velocities
             case 'v':
@@ -277,6 +315,9 @@ public class BipedHopperTest extends TestbedTest {
 
             //Control update
             m_hopper.update(timeStep);
+
+            if (timeStep > 0)
+                simTime += timeStep;
         }
 
         updateDrawing(settings);
@@ -287,10 +328,11 @@ public class BipedHopperTest extends TestbedTest {
         }
 
         if (m_hopper != null) {
+            addTextLine("Runtime: " + numFormat.format(simTime));
             addTextLine("Control State: " + m_hopper.getControlState());
             addTextLine("Active Leg Spring Compression: " + numFormat.format(m_hopper.getActiveSpringJoint().getJointTranslation()));
             addTextLine("Body Vel X: " + numFormat.format(m_hopper.getMainBody().getLinearVelocity().x));
-            addTextLine("Target Body Vel X: " + numFormat.format(((BipedHopperControl)m_hopper.getCurrentControl()).m_targetBodyVelX));
+            addTextLine("Target Body Vel X: " + numFormat.format(((BipedHopperControl) m_hopper.getCurrentControl()).m_targetBodyVelX));
             addTextLine("Vel X Leg Gain: " + numFormat.format(((BipedHopperControl)m_hopper.getCurrentControl()).m_targetBodyVelXLegPlacementGain));
             addTextLine("Thrust offset: " + numFormat.format(((BipedHopperControl)m_hopper.getCurrentControl()).m_activeThrustDelta));
             addTextLine("Flight period: " + numFormat.format(m_hopper.m_currFlightPeriod));
@@ -365,6 +407,19 @@ public class BipedHopperTest extends TestbedTest {
             dd.drawSegment(bodyTransform.p, bodyTransform.p.add(idleLegTorqueLine), new Color3f(0,1,1));
 
         }
+    }
+
+    protected BipedHopperControl getNextControl() {
+        int nextControlIdx = provider.CurrControlIdx() + 1;
+        BipedHopperControl nextControl = null;
+        //Append a new control if currently none is specified (ie: we're at the end of the prim's sequence)
+        //The new control by default takes on prior control step's values
+        if (nextControlIdx >= provider.NumControls())
+            nextControl = (BipedHopperControl)provider.getControlAtIdx(provider.NumControls() - 1).duplicate();
+            //Otherwise, we'll modify the existing control object at this step
+        else
+            nextControl = (BipedHopperControl)provider.getControlAtIdx(nextControlIdx);
+        return nextControl;
     }
 }
 

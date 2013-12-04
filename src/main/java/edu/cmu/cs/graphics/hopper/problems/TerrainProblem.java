@@ -1,5 +1,6 @@
 package edu.cmu.cs.graphics.hopper.problems;
 
+import com.thoughtworks.xstream.XStream;
 import org.jbox2d.collision.shapes.ChainShape;
 import org.jbox2d.collision.shapes.PolygonShape;
 import org.jbox2d.common.Vec2;

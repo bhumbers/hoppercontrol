@@ -1,6 +1,7 @@
 package edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests;
 
 import edu.cmu.cs.graphics.hopper.VecUtils;
+import edu.cmu.cs.graphics.hopper.control.ControlProvider;
 import edu.cmu.cs.graphics.hopper.control.SampledControlPrim;
 import edu.cmu.cs.graphics.hopper.problems.TerrainProblem;
 import edu.cmu.cs.graphics.hopper.control.Worm;
@@ -21,17 +22,19 @@ import org.jbox2d.dynamics.joints.RevoluteJoint;
 import org.jbox2d.testbed.framework.TestbedSettings;
 import org.jbox2d.testbed.framework.TestbedTest;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 /** Used for debugging Worm avatar */
 public class WormTest extends TestbedTest {
+    static DecimalFormat numFormat = new DecimalFormat( "#,###,###,##0.000" );
+
     Worm avatar;
     TerrainProblem terrain;
-    SampledControlPrim controlPrim;         //the control primitive that the user specifies
+    ControlProvider<WormControl> provider;
 
-    float primTime = 0.0f;                  //runtime of control primitive
     float simTime = 0.0f;                  //total simulation time
     int selectedWormJoint = 0;
 
@@ -91,13 +94,14 @@ public class WormTest extends TestbedTest {
         int numJoints = 4;
         float controlTimestep = 0.1f;
 
-        avatar = new Worm(numJoints);
+        avatar = new Worm(numJoints, controlTimestep);
         avatar.init(getWorld());
 
         selectedWormJoint = 0;
 
-        controlPrim = new SampledControlPrim(controlTimestep);
-        controlPrim.specifyControlForTime(new WormControl(numJoints), 0.0f);
+        provider = new ControlProvider<WormControl>();
+        provider.specifyControlForIndex(new WormControl(numJoints), 0);
+        avatar.setControlProvider(provider);
 
         //Terrain test
         Random r = new Random();
@@ -130,34 +134,16 @@ public class WormTest extends TestbedTest {
             //Since control is discretized, we should only control the "next" target joint angles rather than current controls
             case 'q':
                 {
-                    int nextPrimStep = controlPrim.getTimestep(primTime) + 1;
-                    WormControl nextControl = null;
-                    //Append a new control if currently none is specified (ie: we're at the end of the prim's sequence)
-                    //The new control by default takes on prior control step's values
-                    if (nextPrimStep >= controlPrim.getNumTimesteps()) {
-                        nextControl = (WormControl)controlPrim.getTimestepControl(controlPrim.getNumTimesteps() - 1).duplicate();
-                    }
-                    //Otherwise, we'll modify the existing control at this step
-                    else
-                        nextControl = (WormControl)controlPrim.getTimestepControl(nextPrimStep);
+                    WormControl nextControl = getNextControl();
                     nextControl.targetLinkAngles[selectedWormJoint] += JOINT_INCREMENT;
-                    controlPrim.specifyControlForTimeStep(nextControl, nextPrimStep);
+                    provider.specifyControlForIndex(nextControl, provider.CurrControlIdx() + 1);
                     break;
                 }
             case 'w':
             {
-                int nextPrimStep = controlPrim.getTimestep(primTime) + 1;
-                WormControl nextControl = null;
-                //Append a new control if currently none is specified (ie: we're at the end of the prim's sequence)
-                //The new control by default takes on prior control step's values
-                if (nextPrimStep >= controlPrim.getNumTimesteps()) {
-                    nextControl = (WormControl)controlPrim.getTimestepControl(controlPrim.getNumTimesteps() - 1).duplicate();
-                }
-                //Otherwise, we'll modify the existing control at this step
-                else
-                    nextControl = (WormControl)controlPrim.getTimestepControl(nextPrimStep);
+                WormControl nextControl = getNextControl();
                 nextControl.targetLinkAngles[selectedWormJoint] -= JOINT_INCREMENT;
-                controlPrim.specifyControlForTimeStep(nextControl, nextPrimStep);
+                provider.specifyControlForIndex(nextControl, provider.CurrControlIdx() + 1);
                 break;
             }
 
@@ -219,17 +205,15 @@ public class WormTest extends TestbedTest {
         float hz = settings.getSetting(TestbedSettings.Hz).value;
         float dt = hz > 0f ? 1f / hz : 0;
 
-        if (dt > 0) {
+        if (dt > 0)
             simTime += dt;
-            primTime += dt;
-        }
 
         if (avatar != null) {
+            addTextLine("Runtime: " + numFormat.format(simTime));
             addTextLine("Control: " + avatar.getCurrentControl().toString());
         }
 
         //Update & apply control params for current time
-        avatar.setCurrentControl(controlPrim.getControl(primTime));
         avatar.update(dt);
 
         drawAvatarDebug();
@@ -286,6 +270,19 @@ public class WormTest extends TestbedTest {
             selectedJoint.getAnchorA(jointPos);
             dd.drawCircle(jointPos, 0.8f, new Color3f(1,1,0));
         }
+    }
+
+    protected WormControl getNextControl() {
+        int nextControlIdx = provider.CurrControlIdx() + 1;
+        WormControl nextControl = null;
+        //Append a new control if currently none is specified (ie: we're at the end of the prim's sequence)
+        //The new control by default takes on prior control step's values
+        if (nextControlIdx >= provider.NumControls())
+            nextControl = (WormControl)provider.getControlAtIdx(provider.NumControls() - 1).duplicate();
+            //Otherwise, we'll modify the existing control object at this step
+        else
+            nextControl = (WormControl)provider.getControlAtIdx(nextControlIdx);
+        return nextControl;
     }
 }
 

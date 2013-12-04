@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Holds body state and runs control logic for biped hopper avatar */
-public class BipedHopper extends Avatar {
+public class BipedHopper extends Avatar<BipedHopperControl> {
     private static final Logger log = LoggerFactory.getLogger(BipedHopper.class);
 
     public enum ControlState {
@@ -82,7 +82,7 @@ public class BipedHopper extends Avatar {
     protected List<Body> m_bodies;
     protected List<? extends Joint> m_joints;
 
-    protected BipedHopperControl m_currControl;
+    protected ControlProvider<BipedHopperControl> m_controlProvider;
 
     public float m_targetActiveHipAngle = 0.0f;     //target angle of active hip relative to body
     public float m_targetdIdleHipAngle = 0.0f;      //target angle of idle hip relative to body
@@ -125,8 +125,13 @@ public class BipedHopper extends Avatar {
         m_targetThrustSpringLength = new float[NUM_LEGS];
         m_targetHopSpringLength = new float[NUM_LEGS];
 
-        //Default control
-        setCurrentControl(new BipedHopperControl());
+        //Arbitrary... really... just out of the way of any world objects
+        m_offset.set(-2.0f, 6.0f);
+
+        //Default control provider
+        ControlProvider<BipedHopperControl> controlProvider = new ControlProvider<BipedHopperControl>();
+        controlProvider.specifyControlForIndex(new BipedHopperControl(), 0);
+        setControlProvider(controlProvider);
     }
 
     @Override
@@ -151,8 +156,6 @@ public class BipedHopper extends Avatar {
 
     @Override
     public void init(World world) {
-        m_offset.set(0.0f, 6.0f);
-
         // Chassis
         {
             PolygonShape shape = new PolygonShape();
@@ -203,6 +206,7 @@ public class BipedHopper extends Avatar {
 
                 BodyDef bd = new BodyDef();
                 bd.type = BodyType.DYNAMIC;
+                bd.position.x =  m_hip[i].getPosition().x;
                 bd.position.y =  m_hip[i].getPosition().y - UPPER_LEG_DEFAULT_LENGTH;   //offset along thigh
                 m_knee[i] = world.createBody(bd);
                 m_knee[i].createFixture(fd);
@@ -221,6 +225,7 @@ public class BipedHopper extends Avatar {
 
                 BodyDef bd = new BodyDef();
                 bd.type = BodyType.DYNAMIC;
+                bd.position.x =  m_hip[i].getPosition().x;
                 bd.position.y =  m_knee[i].getPosition().y - LOWER_LEG_DEFAULT_LENGTH;   //offset to bottom of shin
                 m_foot[i] = world.createBody(bd);
                 m_foot[i].createFixture(capFd);
@@ -304,18 +309,12 @@ public class BipedHopper extends Avatar {
     }
 
     @Override
-    public void setCurrentControl(Control control) {
-        //Not ideal OO design, but such is life
-        if (!(control instanceof  BipedHopperControl)) {
-            log.error("Tried to assign a non-BipedHopperControl object to a BipedHopper avatar");
-            return;
-        }
-
-        this.m_currControl = (BipedHopperControl)control;
+    public void setControlProvider(ControlProvider<BipedHopperControl> provider) {
+        this.m_controlProvider = provider;
     }
 
-    public Control getCurrentControl() {
-        return m_currControl;
+    public BipedHopperControl getCurrentControl() {
+        return m_controlProvider.getCurrControl();
     }
 
     @Override
@@ -369,7 +368,7 @@ public class BipedHopper extends Avatar {
                 //TODO: Correct thrust for desired hop height
                 //m_thrustSpring[m_activeLegIdx].setLength(UPPER_LEG_DEFAULT_LENGTH + 0.3f);
                 float lengthAtThrustStart = m_targetThrustSpringLength[m_activeLegIdx];
-                m_targetThrustSpringLength[m_activeLegIdx] = lengthAtThrustStart + m_currControl.m_activeThrustDelta;
+                m_targetThrustSpringLength[m_activeLegIdx] = lengthAtThrustStart + m_controlProvider.getCurrControl().m_activeThrustDelta;
                 break;
             case UNLOAD:
                 //TODO
@@ -401,7 +400,7 @@ public class BipedHopper extends Avatar {
     }
 
     protected void servoBodyPitch() {
-        float targetActiveHipAngle = m_bodyPitch - m_currControl.m_targetBodyPitch;
+        float targetActiveHipAngle = m_bodyPitch - m_controlProvider.getCurrControl().m_targetBodyPitch;
         m_activeHipTorque = servoTowardAngle(m_hipJoint[m_activeLegIdx], targetActiveHipAngle, HIP_PROP_GAIN, HIP_DRAG_GAIN);
     }
 
@@ -418,7 +417,7 @@ public class BipedHopper extends Avatar {
         //(to make this gradual, use lerp on current value (hacky, but seems to work well))
         float alpha = Math.min(1.0f, 5.0f * dt);
 
-        float idleLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH + m_currControl.m_idleThrustDelta;
+        float idleLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH + m_controlProvider.getCurrControl().m_idleThrustDelta;
         float activeLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH;
 
 //        if (NUM_LEGS > 1)
@@ -432,8 +431,8 @@ public class BipedHopper extends Avatar {
 
         /////// ANGLE /////////////////////////////////////////////////////////////////////////////
         //Set leg position using hip based on desired landing location
-        float deltaFromTargetVel = m_bodyVel.x - m_currControl.m_targetBodyVelX;
-        float desiredLandingOffsetX = (0.5f * m_bodyVel.x * m_nextStancePeriodEst) + (m_currControl.m_targetBodyVelXLegPlacementGain * deltaFromTargetVel);
+        float deltaFromTargetVel = m_bodyVel.x - m_controlProvider.getCurrControl().m_targetBodyVelX;
+        float desiredLandingOffsetX = (0.5f * m_bodyVel.x * m_nextStancePeriodEst) + (m_controlProvider.getCurrControl().m_targetBodyVelXLegPlacementGain * deltaFromTargetVel);
 
         //Bound to some reasonable range
         float maxAllowedOffsetX = 0.5f * activeLegTerminalLength;
