@@ -41,6 +41,7 @@
     <orderEntry type="library" name="Maven: org.jogamp.jogl:jogl-all:natives-solaris-i586:2.0-rc11" level="project" />
     <orderEntry type="library" name="Maven: org.jogamp.jogl:jogl-all:natives-windows-amd64:2.0-rc11" level="project" />
     <orderEntry type="library" name="Maven: org.jogamp.jogl:jogl-all:natives-windows-i586:2.0-rc11" level="project" />
+    <orderEntry type="library" name="com.thoughtworks.xstream:xstream:1.4.5" level="project" />
   </component>
 </module>
 
