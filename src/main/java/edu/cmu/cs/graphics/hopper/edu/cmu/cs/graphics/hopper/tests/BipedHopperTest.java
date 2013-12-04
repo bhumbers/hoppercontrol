@@ -1,5 +1,6 @@
 package edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests;
 
+import com.jogamp.newt.event.KeyEvent;
 import edu.cmu.cs.graphics.hopper.control.BipedHopper;
 import edu.cmu.cs.graphics.hopper.VecUtils;
 import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
@@ -42,6 +43,7 @@ public class BipedHopperTest extends TestbedTest {
 
 //    TerrainProblem terrain;
     ObstacleProblem obstacleProb;
+    float obsW = 1.0f; float obsH = 1.0f; //obstacle width, height *applied on next world init*
 
     boolean m_followAvatar;
 
@@ -121,11 +123,14 @@ public class BipedHopperTest extends TestbedTest {
             ground.createFixture(shape, 0.0f);
         }
 
+        final float INIT_VEL_X = 1.0f;
         m_hopper = new BipedHopper();
+        m_hopper.setInitState(new Vec2(-10.0f, 8.0f), new Vec2(INIT_VEL_X, 0.0f));
         m_hopper.init(getWorld());
 
         provider = new ControlProvider<BipedHopperControl>();
         provider.specifyControlForIndex(new BipedHopperControl(), 0);
+        provider.getCurrControl().m_targetBodyVelX = INIT_VEL_X;
         m_hopper.setControlProvider(provider);
 
         m_followAvatar = true;
@@ -149,7 +154,7 @@ public class BipedHopperTest extends TestbedTest {
 //        terrain.init(getWorld());
 
         //Obstacle test
-        obstacleProb = new ObstacleProblem(1.0f, 2.0f);
+        obstacleProb = new ObstacleProblem(obsW, obsH);
         obstacleProb.init(getWorld());
     }
 
@@ -160,8 +165,29 @@ public class BipedHopperTest extends TestbedTest {
         float LEG_PLACEMENT_GAIN_INCREMENT = 0.01f;
         float VEL_INCREMENT_X = 0.1f;
         float ANG_VEL_INCREMENT = 0.1f;
+        float OBSTACLE_WIDTH_INCREMENT = 0.1f;
+        float OBSTACLE_HEIGHT_INCREMENT = 0.1f;
 
-        //TODO: Don't modify control vals directly; just set for next discrete update
+        //Modify obstacle, reset
+
+        switch (argKeyCode) {
+            case KeyEvent.VK_UP:
+                obsH += OBSTACLE_HEIGHT_INCREMENT;
+                reset();
+                break;
+            case KeyEvent.VK_DOWN:
+                obsH -= OBSTACLE_HEIGHT_INCREMENT;
+                reset();
+                break;
+            case KeyEvent.VK_RIGHT:
+                obsW += OBSTACLE_WIDTH_INCREMENT;
+                reset();
+                break;
+            case KeyEvent.VK_LEFT:
+                obsW -= OBSTACLE_WIDTH_INCREMENT;
+                reset();
+                break;
+        }
 
         switch (key) {
             //Modify target velocity

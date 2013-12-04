@@ -74,7 +74,8 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
     protected float m_initThrustJointLength[];
     protected float m_initSpringJointLength[];
 
-    protected Vec2 m_offset = new Vec2();
+    protected Vec2 m_initPos = new Vec2();
+    protected Vec2 m_initVel = new Vec2();
     protected Body m_chassis;
     protected Body m_hip[];
     protected Body m_knee[];
@@ -126,7 +127,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
         m_targetHopSpringLength = new float[NUM_LEGS];
 
         //Arbitrary... really... just out of the way of any world objects
-        m_offset.set(-2.0f, 6.0f);
+        setInitState(new Vec2(-2.0f, 6.0f), new Vec2(0.0f, 0.0f));
 
         //Default control provider
         ControlProvider<BipedHopperControl> controlProvider = new ControlProvider<BipedHopperControl>();
@@ -154,6 +155,11 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
     public void setInContact(boolean val) {m_inContact = val;}
     public boolean getInContact() {return m_inContact;}
 
+    public void setInitState(Vec2 initPos, Vec2 initVel) {
+        m_initPos.set(initPos);
+        m_initVel.set(initVel);
+    }
+
     @Override
     public void init(World world) {
         // Chassis
@@ -167,7 +173,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
             sd.filter.groupIndex = -1;
             BodyDef bd = new BodyDef();
             bd.type = BodyType.DYNAMIC;
-            bd.position.set(m_offset);
+            bd.position.set(m_initPos);
             m_chassis = world.createBody(bd);
             m_chassis.createFixture(sd);
             m_bodies.add(m_chassis);
@@ -188,7 +194,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
                 sd.filter.groupIndex = -1;
                 BodyDef bd = new BodyDef();
                 bd.type = BodyType.DYNAMIC;
-                bd.position.set(m_offset);
+                bd.position.set(m_initPos);
                 m_hip[i] = world.createBody(bd);
                 m_hip[i].createFixture(sd);
                 m_bodies.add(m_hip[i]);
@@ -236,7 +242,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
             {
                 RevoluteJointDef jd = new RevoluteJointDef();
 
-                jd.initialize(m_chassis, m_hip[i], m_offset);
+                jd.initialize(m_chassis, m_hip[i], m_initPos);
                 jd.collideConnected = false;
     //            jd.enableLimit = true;
     //            jd.lowerAngle = jd.upperAngle = 0.0f;
@@ -306,6 +312,11 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
 //                }
             }
         }
+
+        //Apply initial velocity to each body part
+        for (Body b : getBodies())  {
+            b.getLinearVelocity().set(m_initVel);
+        }
     }
 
     @Override
@@ -346,6 +357,9 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
                     m_nextStancePeriodEst = m_currStancePeriod; //estimate next support from current
                     swapActiveLeg();
                     m_currFlightPeriod = 0.0f;
+
+                    //Advance to next control... this is a new hop
+                    m_controlProvider.goToNextControl();
                 }
                 break;
         }
