@@ -24,7 +24,7 @@ public class ControlProvider<C extends Control> {
     }
 
     public void goToNextControl() {
-        if (currControlIdx < NumControls() - 1)
+//        if (currControlIdx < NumControls() - 1)
             currControlIdx++;
     }
 
@@ -57,25 +57,26 @@ public class ControlProvider<C extends Control> {
     public C getControlAtIdx(int idx) {
         Control control = null;
 
-        //NEW VERSON: Just returns null if outside available range
-        if (idx < controls.size())
-            return controls.get(idx);
-        else
-            return null;
-
-        //OLD VERSION: Allows for control index outside valid range by clamping index to allowed range (I'd rather have things fail ungracefully if that case occurs for now. -bh, 12.4.2013)
-//        //Return as usual if index is in range for which we have control values
+//        //Version #1: Just return null if outside available range
 //        if (idx < controls.size())
 //            return controls.get(idx);
-//        //Otherwise, clamp controls at start/end of available range if we have any
-//        else if (!controls.isEmpty()) {
-//            if (idx <= 0)
-//                return controls.get(0);
-//            else
-//                return controls.get(controls.size() - 1);
-//        }
-//        //Otherwise, return no control
 //        else
 //            return null;
+
+        //Version #2: If control index outside valid range, clamp index to allowed range
+
+        //Return as usual if index is in range for which we have control values
+        if (idx < controls.size())
+            return controls.get(idx);
+        //Otherwise, clamp controls at start/end of available range if we have any
+        else if (!controls.isEmpty()) {
+            if (idx <= 0)
+                return controls.get(0);
+            else
+                return controls.get(controls.size() - 1);
+        }
+        //Otherwise, return no control
+        else
+            return null;
     }
 }
