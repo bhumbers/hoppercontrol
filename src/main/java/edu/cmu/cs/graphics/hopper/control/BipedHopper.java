@@ -185,9 +185,6 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
             m_chassis = world.createBody(bd);
             m_chassis.createFixture(sd);
             m_bodies.add(m_chassis);
-
-            float blah = m_chassis.getMass();
-            System.out.print(blah);
         }
 
         for (int i = 0; i < NUM_LEGS; i++) {

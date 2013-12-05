@@ -42,7 +42,11 @@ public class ExplorerMain {
 
         //Test problem set
         List<ProblemDefinition> problems = new ArrayList<ProblemDefinition>();
-        problems.add(new ObstacleProblemDefinition(1,1));
+        for (int i = 1; i < 5; i++) {
+            for (int j = 1; j < 5; j++) {
+                problems.add(new ObstacleProblemDefinition(i,j));
+            }
+        }
 
         //Test avatar
         AvatarDefinition avatarDef = new BipedHopperDefinition();
@@ -64,5 +68,7 @@ public class ExplorerMain {
 
 
         log.info("Control exploration COMPLETE");
+        log.info("Sim Tests used:           " + explorer.getNumTests());
+        log.info("Oracle Challenges issued: " + explorer.getNumOracleChallenges());
     }
 }

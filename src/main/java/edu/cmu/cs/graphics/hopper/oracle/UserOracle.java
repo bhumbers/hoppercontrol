@@ -68,10 +68,11 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
 
         ProblemInstance problem = new ProblemInstance(problemDef, avatarDef);
         problem.init();
+
         test.setProblem(problem);
         test.reset();
 
-        while (problem.getStatus() == ProblemInstance.ProblemStatus.RUNNING) {
+        while (problem.getStatus() != ProblemInstance.ProblemStatus.SOLVED) {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
@@ -79,6 +80,9 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
                 e.printStackTrace();
             }
         }
+
+        //Clear the problem once completed
+        test.setProblem(null);
 
         return problem.getCtrlProvider();
     }

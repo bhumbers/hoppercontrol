@@ -43,6 +43,9 @@ public class ProblemInstanceTest extends TestbedTest {
 
     ProblemInstance problem;
 
+    //Problem that will be swapped in at next update (required for thread safety)
+    ProblemInstance nextProblem;
+
     boolean m_followAvatar;
 
     public ProblemInstanceTest() {
@@ -53,8 +56,21 @@ public class ProblemInstanceTest extends TestbedTest {
         xstream.omitField(ControlProvider.class, "currControlIdx");
     }
 
-    public void setProblem(ProblemInstance problem) {
+    public synchronized void setProblem(ProblemInstance problem) {
+        //Note: Synchronized to prevent swapping problem out while sim steps are ongoing
+
         this.problem = problem;
+
+        //Update this tests' simulation update params to match the problem
+        if (problem != null) {
+            model.getSettings().getSetting(TestbedSettings.Hz).value = problem.updateHz;
+            model.getSettings().getSetting(TestbedSettings.PositionIterations).value = problem.posIters;
+            model.getSettings().getSetting(TestbedSettings.VelocityIterations).value = problem.velIters;
+            model.getSettings().getSetting(TestbedSettings.AllowSleep).enabled = problem.allowSleep;
+            model.getSettings().getSetting(TestbedSettings.WarmStarting).enabled = problem.warmStarting;
+            model.getSettings().getSetting(TestbedSettings.SubStepping).enabled = problem.substepping;
+            model.getSettings().getSetting(TestbedSettings.ContinuousCollision).enabled = problem.continuousCollision;
+        }
     }
 
     @Override
@@ -100,6 +116,9 @@ public class ProblemInstanceTest extends TestbedTest {
         if (problem != null) {
             problem.init();
             m_world = problem.getWorld();
+        }
+        else {
+            m_world = null;
         }
 
         init(m_world, false);

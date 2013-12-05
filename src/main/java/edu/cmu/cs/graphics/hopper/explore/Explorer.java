@@ -31,6 +31,9 @@ public abstract class Explorer<C extends Control> {
     protected int numTests;
     protected int numOracleChallenges;
 
+    public int getNumTests() {return numTests;}
+    public int getNumOracleChallenges() {return numOracleChallenges;}
+
     ChallengeOracle<C> oracle;
 
     AvatarDefinition avatarDef;
@@ -62,6 +65,8 @@ public abstract class Explorer<C extends Control> {
             ProblemDefinition problemDef = getNextProblemToTest();
             prepareForNextProblem();
 
+            log.info("Attempting to solve problem: " + problemDef.toString());
+
             //Test control sequences until problem is solved or we give up
             boolean problemSolved = false;
             ControlProvider<C> potentialSolution = getNextControlSequence(problemDef);
@@ -79,9 +84,12 @@ public abstract class Explorer<C extends Control> {
 
             //If solved, mark it as such
             //Otherwise, add to list of problems for oracle to solve
-            if (problemSolved)
+            if (problemSolved)    {
+                log.info("Found solution to problem: " + problemDef.toString());
                 markProblemSolved(problemDef, potentialSolution);
+            }
             else {
+                log.info("Unable to find solution to problem; adding to oracle challenge list: " + problemDef.toString());
                 oracleChallengeProblems.add(problemDef);
                 //TODO: should we also remove from unsolvedProblems so that we don't try to re-solve while waiting for oracle?
             }
@@ -89,6 +97,8 @@ public abstract class Explorer<C extends Control> {
             //If this explorer wishes to do so at this moment, poll the oracle
             ProblemDefinition challenge = getNextChallengeProblem();
             if (challenge != null) {
+                log.info("Sending challenge #" + numOracleChallenges + " to oracle: " + problemDef.toString());
+                numOracleChallenges++;
                 ControlProvider<C> challengeSolution = oracle.solveChallenge(challenge, avatarDef);
 
                 //DEBUGGING: Verify that oracle solution is correct.
@@ -99,10 +109,9 @@ public abstract class Explorer<C extends Control> {
                     log.warn("Oracle returned an incorrect challenge solution. That shouldn't happen. ProblemDefinition hash: " + challenge.hashCode());
                 }
                 else {
+                    log.info("Oracle successfully solved challenge; adding to list of solved problems: " + problemDef.toString());
                     markProblemSolved(challenge, challengeSolution);
                     onChallengeSolutionGiven(challengeSolution);
-                    //Save the provided solution
-
                 }
             }
         }

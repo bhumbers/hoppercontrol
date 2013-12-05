@@ -31,4 +31,9 @@ public class ObstacleProblemDefinition extends ProblemDefinition {
         body = world.createBody(bd);
         body.createFixture(fd);
     }
+
+    @Override
+    public String toString() {
+        return "ObstacleProbDef: W=" + width + ", H=" + height;
+    }
 }

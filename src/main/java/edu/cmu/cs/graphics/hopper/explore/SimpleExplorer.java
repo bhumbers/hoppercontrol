@@ -10,8 +10,6 @@ import java.util.List;
 /** A baseline explorer that doesn't do anything smart in terms of prioritizing
  * which examples to send to the user or which controls to test at each timestep. */
 public class SimpleExplorer<C extends Control> extends Explorer<C> {
-    List<ProblemDefinition> unsolvedProblemList;
-
     //Control providers/sequences usable by this explorer
     List<ControlProvider<C>> controlEnsemble;
     int nextControlProviderIdx;
@@ -19,9 +17,6 @@ public class SimpleExplorer<C extends Control> extends Explorer<C> {
     @Override
     public void initExploration() {
         controlEnsemble = new ArrayList<ControlProvider<C>>();
-
-        unsolvedProblemList = new ArrayList<ProblemDefinition>();
-        unsolvedProblemList.addAll(unsolvedProblems);
     }
 
     @Override
@@ -31,7 +26,9 @@ public class SimpleExplorer<C extends Control> extends Explorer<C> {
 
     @Override
     protected ProblemDefinition getNextProblemToTest() {
-        return unsolvedProblemList.get(0);
+        if (unsolvedProblems.size() > 0)
+            return unsolvedProblems.iterator().next();
+        return null;
     }
 
     @Override

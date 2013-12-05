@@ -43,6 +43,16 @@ public class ProblemInstance implements
     protected World world;
     protected Avatar avatar;
 
+    //Simulation stepping stuff
+    public int updateHz;             //determines simulation update timestep (1/updateHz)
+    public int posIters;
+    public int velIters;
+    public boolean allowSleep;
+    public boolean warmStarting;
+    public boolean substepping;
+    public boolean continuousCollision;
+
+
     protected ControlProvider givenCtrlProvider;
 
     /** Creates a new problem instance where avatar will use default control provider */
@@ -72,12 +82,20 @@ public class ProblemInstance implements
         simTime = 0;
         stepCount = 0;
 
+        //NOTE: We're going to hardcode pretty high values for now (required by biped hopper)
+        updateHz = 1000;
+        posIters = 30;
+        velIters = 50;
+        allowSleep = true;
+        warmStarting = true;
+        substepping =  false;
+        continuousCollision = true;
+
         Vec2 gravity = new Vec2(0, -10f);
         world = new World(gravity);
 
         if (avatarDef != null) {
             avatar = avatarDef.create();
-            avatar.init(world);
 
             //If given a specific provider, use it
             if (givenCtrlProvider != null)
@@ -87,6 +105,8 @@ public class ProblemInstance implements
             final float INIT_VEL_X = 1.0f;
             avatar.setInitState(new Vec2(-10.0f, 8.0f), new Vec2(INIT_VEL_X, 0.0f));
 //            ctrlProvider.getCurrControl().targetBodyVelX = INIT_VEL_X;
+
+            avatar.init(world);
         }
         problemDef.init(world);
 
@@ -116,12 +136,8 @@ public class ProblemInstance implements
 
     public void run() {
         //Timestep through complete problem instance test
-        float updateHz = 60.0f;
-        int posIters = 3;
-        int velIters = 8;
-
         simTime = 0.0f;
-        float dt = 1/updateHz;
+        float dt = 1.0f/updateHz;
         while (status == ProblemStatus.RUNNING) {
             update(dt, posIters, velIters);
         }
@@ -132,14 +148,16 @@ public class ProblemInstance implements
         world.step(dt, velIters, posIters);
         simTime += dt;
 
-        //TODO: Evaluate problem status. Solved? Failed?
+        //TODO: Actually evaluate problem status. Solved? Failed?
         //This is probably best delegated to the problem def (eg: problemDef.getStatus(World, Avatar) or some "evaluator" class,
         //the latter allowing us to decouple a problem definition from how we evaluate if it's solved or not.
-        //TESTING: Solved if we cross some dist to the right, failed if we go left (arbirtrary)
-        if (avatar.getMainBody().getPosition().x < -5.0f)
+        //TESTING: Solved if we cross some dist to the right, failed if we go left (arbirtrary) or run too long
+        if (simTime > 10.0f)
             status = ProblemStatus.FAILURE;
         else if (avatar.getMainBody().getPosition().x > 1.0f)
             status = ProblemStatus.SOLVED;
+        else
+            status = ProblemStatus.RUNNING;
     }
 
     @Override
