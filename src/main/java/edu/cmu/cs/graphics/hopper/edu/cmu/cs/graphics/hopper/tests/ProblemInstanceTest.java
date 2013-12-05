@@ -282,7 +282,7 @@ public class ProblemInstanceTest extends TestbedTest {
             case 'y':
                 getModel().getSettings().singleStep = true;
                 if (!getModel().getSettings().pause)
-                    gdddetModel().getSettings().pause = true;
+                    getModel().getSettings().pause = true;
                 break;
 
             //Scrub through saved states (pretty hacky for now)
