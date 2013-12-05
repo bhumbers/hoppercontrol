@@ -2,29 +2,25 @@ package edu.cmu.cs.graphics.hopper.explore;
 
 import edu.cmu.cs.graphics.hopper.control.Control;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
-import edu.cmu.cs.graphics.hopper.problems.Problem;
+import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /** A baseline explorer that doesn't do anything smart in terms of prioritizing
  * which examples to send to the user or which controls to test at each timestep. */
 public class SimpleExplorer<C extends Control> extends Explorer<C> {
-    List<Problem> unsolvedProblemList;
+    List<ProblemDefinition> unsolvedProblemList;
 
     //Control providers/sequences usable by this explorer
-    List<ControlProvider<C>> controlProviders;
+    List<ControlProvider<C>> controlEnsemble;
     int nextControlProviderIdx;
 
     @Override
     public void initExploration() {
-        controlProviders = new ArrayList<ControlProvider<C>>();
+        controlEnsemble = new ArrayList<ControlProvider<C>>();
 
-        //TESTING: Create a dummy controller to use
-        controlProviders.add(new ControlProvider<C>());
-
-        unsolvedProblemList = new ArrayList<Problem>();
+        unsolvedProblemList = new ArrayList<ProblemDefinition>();
         unsolvedProblemList.addAll(unsolvedProblems);
     }
 
@@ -34,24 +30,32 @@ public class SimpleExplorer<C extends Control> extends Explorer<C> {
     }
 
     @Override
-    protected Problem getNextProblemToTest() {
+    protected ProblemDefinition getNextProblemToTest() {
         return unsolvedProblemList.get(0);
     }
 
     @Override
-    protected ControlProvider<C> getNextControlSequence(Problem p) {
-        //Just return next sequence in the list
-        ControlProvider<C> provider = controlProviders.get(nextControlProviderIdx);
-        if (nextControlProviderIdx < controlProviders.size() - 1)
+    protected ControlProvider<C> getNextControlSequence(ProblemDefinition p) {
+        //Just return next sequence in the list, if available
+        ControlProvider<C> provider = null;
+        if (nextControlProviderIdx <= controlEnsemble.size() - 1) {
+            provider = controlEnsemble.get(nextControlProviderIdx);
             nextControlProviderIdx++;
+        }
         return provider;
     }
 
     @Override
-    protected Problem getNextChallengeProblem() {
+    protected ProblemDefinition getNextChallengeProblem() {
         //Return something arbitrary from the map of marked oracle problems
         if (!oracleChallengeProblems.isEmpty())
             return oracleChallengeProblems.iterator().next();
         return null;
+    }
+
+    @Override
+    protected void onChallengeSolutionGiven(ControlProvider<C> challengeSolution) {
+        //Add the new solution to our ensemble (control vocabulary)
+        controlEnsemble.add(challengeSolution);
     }
 }

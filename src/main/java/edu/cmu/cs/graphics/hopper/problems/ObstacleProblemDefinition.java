@@ -1,24 +1,18 @@
 package edu.cmu.cs.graphics.hopper.problems;
 
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
-import org.jbox2d.collision.shapes.ChainShape;
 import org.jbox2d.collision.shapes.PolygonShape;
-import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
- /** A solo obstacle clearing problem for avatar */
-public class ObstacleProblem extends Problem {
+/** A solo obstacle clearing problem for avatar */
+public class ObstacleProblemDefinition extends ProblemDefinition {
      //Definition
     final protected float width;
     final protected float height;
 
     protected Body body;
 
-    public ObstacleProblem(float width, float height) {
+    public ObstacleProblemDefinition(float width, float height) {
         this.width = width; this.height = height;
     }
 
@@ -37,11 +31,4 @@ public class ObstacleProblem extends Problem {
         body = world.createBody(bd);
         body.createFixture(fd);
     }
-
-     @Override
-     public boolean runControlTest(ControlProvider ctrlProvider) {
-         //TODO
-
-         return true;
-     }
 }

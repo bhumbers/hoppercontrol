@@ -2,8 +2,7 @@ package edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests;
 
 import edu.cmu.cs.graphics.hopper.VecUtils;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
-import edu.cmu.cs.graphics.hopper.control.SampledControlPrim;
-import edu.cmu.cs.graphics.hopper.problems.TerrainProblem;
+import edu.cmu.cs.graphics.hopper.problems.TerrainProblemDefinition;
 import edu.cmu.cs.graphics.hopper.control.Worm;
 import edu.cmu.cs.graphics.hopper.control.WormControl;
 import org.jbox2d.callbacks.ContactImpulse;
@@ -32,7 +31,7 @@ public class WormTest extends TestbedTest {
     static DecimalFormat numFormat = new DecimalFormat( "#,###,###,##0.000" );
 
     Worm avatar;
-    TerrainProblem terrain;
+    TerrainProblemDefinition terrain;
     ControlProvider<WormControl> provider;
 
     float simTime = 0.0f;                  //total simulation time
@@ -99,8 +98,7 @@ public class WormTest extends TestbedTest {
 
         selectedWormJoint = 0;
 
-        provider = new ControlProvider<WormControl>();
-        provider.specifyControlForIndex(new WormControl(numJoints), 0);
+        provider = new ControlProvider<WormControl>(new WormControl(numJoints));
         avatar.setControlProvider(provider);
 
         //Terrain test
@@ -118,7 +116,7 @@ public class WormTest extends TestbedTest {
                 y = 0;
             verts.add(y);
         }
-        terrain = new TerrainProblem(verts, terrainDeltaX);
+        terrain = new TerrainProblemDefinition(verts, terrainDeltaX);
         terrain.init(getWorld());
     }
 

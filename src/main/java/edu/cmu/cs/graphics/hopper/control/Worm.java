@@ -33,8 +33,13 @@ public class Worm extends Avatar<WormControl> {
         this.controlTimestep = controlTimestep;
 
         //Default control provider
-        setControlProvider(new ControlProvider<WormControl>());
-        controlProvider.specifyControlForIndex(new WormControl(numLinks), 0);
+        setControlProvider(new ControlProvider<WormControl>(new WormControl(numLinks)));
+    }
+
+
+    @Override
+    public void setInitState(Vec2 initPos, Vec2 initVel) {
+        //TODO
     }
 
     @Override
@@ -93,6 +98,11 @@ public class Worm extends Avatar<WormControl> {
     @Override
     public void setControlProvider(ControlProvider<WormControl> provider) {
         this.controlProvider = provider;
+    }
+
+    @Override
+    public ControlProvider<WormControl> getControlProvider() {
+        return controlProvider;
     }
 
     public WormControl getCurrentControl() {

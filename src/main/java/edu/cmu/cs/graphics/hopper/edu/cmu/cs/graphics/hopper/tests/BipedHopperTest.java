@@ -6,10 +6,7 @@ import edu.cmu.cs.graphics.hopper.control.BipedHopper;
 import edu.cmu.cs.graphics.hopper.VecUtils;
 import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
-import edu.cmu.cs.graphics.hopper.problems.ObstacleProblem;
-import org.jbox2d.callbacks.ContactImpulse;
 import org.jbox2d.callbacks.DebugDraw;
-import org.jbox2d.collision.Manifold;
 import org.jbox2d.collision.shapes.EdgeShape;
 import org.jbox2d.common.*;
 import org.jbox2d.dynamics.*;
@@ -41,8 +38,8 @@ public class BipedHopperTest extends TestbedTest {
     BipedHopper m_hopper;
     ControlProvider<BipedHopperControl> provider;
 
-//    TerrainProblem terrain;
-    ObstacleProblem obstacleProb;
+//    TerrainProblemDefinition terrain;
+//    ObstacleProblemDefinition obstacleProb;
     float obsW = 1.0f; float obsH = 1.0f; //obstacle width, height *applied on next world init*
 
     boolean m_followAvatar;
@@ -56,43 +53,16 @@ public class BipedHopperTest extends TestbedTest {
     }
 
     @Override
-    public Long getTag(Body argBody) {
-//        if (argBody == m_chassis) {
-//            return CHASSIS_TAG;
-//        } else if (argBody == m_upperLeg) {
-//            return UPPER_LEG_TAG;
-//        } else if (argBody == m_lowerLeg) {
-//            return LOWER_LEG_TAG;
-//        }
-        return null;
-    }
+    public Long getTag(Body argBody) { return null;}
 
     @Override
-    public Long getTag(Joint argJoint) {
-//        if (argJoint == m_hipJoint) {
-//            return HIP_TAG;
-//        }
-        return null;
-    }
+    public Long getTag(Joint argJoint) {return null;}
 
     @Override
-    public void processBody(Body argBody, Long argTag) {
-//        if (argTag == CHASSIS_TAG) {
-//            m_chassis = argBody;
-//        } else if (argTag == UPPER_LEG_TAG) {
-//            m_upperLeg = argBody;
-//        } else if (argTag == LOWER_LEG_TAG) {
-//             m_lowerLeg = argBody;
-//        }
-    }
+    public void processBody(Body argBody, Long argTag) {}
 
     @Override
-    public void processJoint(Joint argJoint, Long argTag) {
-//        if (argTag == HIP_TAG) {
-//            m_hipJoint = (RevoluteJoint) argJoint;
-//            m_motorOn = m_hipJoint.isMotorEnabled();
-//        }
-    }
+    public void processJoint(Joint argJoint, Long argTag) {}
 
     @Override
     public boolean isSaveLoadEnabled() {
@@ -104,9 +74,6 @@ public class BipedHopperTest extends TestbedTest {
         if (argDeserialized) {
             return;
         }
-
-        //Only stable at shorter timesteps...
-//        set
 
 //        getWorld().setGravity(new Vec2(0.0f,0.0f));
 
@@ -136,34 +103,11 @@ public class BipedHopperTest extends TestbedTest {
         m_hopper.setInitState(new Vec2(-10.0f, 8.0f), new Vec2(INIT_VEL_X, 0.0f));
         m_hopper.init(getWorld());
 
-        provider = new ControlProvider<BipedHopperControl>();
-        provider.specifyControlForIndex(new BipedHopperControl(), 0);
+        provider = new ControlProvider<BipedHopperControl>(new BipedHopperControl());
         provider.getCurrControl().targetBodyVelX = INIT_VEL_X;
         m_hopper.setControlProvider(provider);
 
         m_followAvatar = true;
-
-//        //Terrain test
-//        Random r = new Random();
-//        r.setSeed(12345);
-//        int terrainLength = 100;
-//        float terrainDeltaX = 2.0f;
-//        float terrainMaxAmp = 4.0f;
-//        float y = 0.0f;
-//        List<Float> verts = new ArrayList<Float>(terrainLength);
-//        verts.add(0.01f);
-//        for (int i = 0; i < terrainLength; i++) {
-//            y = terrainMaxAmp*(r.nextFloat());
-//            if (y < 0)
-//                y = 0;
-//            verts.add(y);
-//        }
-//        terrain = new TerrainProblem(verts, terrainDeltaX);
-//        terrain.init(getWorld());
-
-        //Obstacle test
-        obstacleProb = new ObstacleProblem(obsW, obsH);
-        obstacleProb.init(getWorld());
     }
 
     @Override
@@ -299,22 +243,6 @@ public class BipedHopperTest extends TestbedTest {
                 if (!getModel().getSettings().pause)
                     getModel().getSettings().pause = true;
                 break;
-
-//            case 'a':
-//                m_hipJoint.setMotorSpeed(-m_motorSpeed);
-//                break;
-//
-//            case 's':
-//                m_hipJoint.setMotorSpeed(0.0f);
-//                break;
-//
-//            case 'd':
-//                m_hipJoint.setMotorSpeed(m_motorSpeed);
-//                break;
-//
-//            case 'm':
-//                m_hipJoint.enableMotor(!m_hipJoint.isMotorEnabled());
-//                break;
         }
     }
 
@@ -414,16 +342,6 @@ public class BipedHopperTest extends TestbedTest {
                 m_hopper.setInContact(false);
             }
         }
-    }
-
-    @Override
-    public void postSolve(Contact contact, ContactImpulse impulse) {
-        super.postSolve(contact, impulse);
-    }
-
-    @Override
-    public void preSolve(Contact contact, Manifold oldManifold) {
-        super.preSolve(contact, oldManifold);
     }
 
     protected void drawHopperDebug() {

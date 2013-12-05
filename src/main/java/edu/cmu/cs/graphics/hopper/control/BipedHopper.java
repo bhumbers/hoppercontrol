@@ -1,19 +1,27 @@
 package edu.cmu.cs.graphics.hopper.control;
 
+import edu.cmu.cs.graphics.hopper.VecUtils;
+import org.jbox2d.callbacks.DebugDraw;
 import org.jbox2d.collision.shapes.CircleShape;
 import org.jbox2d.collision.shapes.PolygonShape;
+import org.jbox2d.common.Color3f;
+import org.jbox2d.common.Transform;
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.*;
+import org.jbox2d.dynamics.contacts.Contact;
 import org.jbox2d.dynamics.joints.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
 /** Holds body state and runs control logic for biped hopper avatar */
 public class BipedHopper extends Avatar<BipedHopperControl> {
     private static final Logger log = LoggerFactory.getLogger(BipedHopper.class);
+
+    static DecimalFormat numFormat = new DecimalFormat( "#,###,###,##0.000" );
 
     public enum ControlState {
         FLIGHT,
@@ -130,8 +138,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
         setInitState(new Vec2(-2.0f, 6.0f), new Vec2(0.0f, 0.0f));
 
         //Default control provider
-        ControlProvider<BipedHopperControl> controlProvider = new ControlProvider<BipedHopperControl>();
-        controlProvider.specifyControlForIndex(new BipedHopperControl(), 0);
+        ControlProvider<BipedHopperControl> controlProvider = new ControlProvider<BipedHopperControl>(new BipedHopperControl());
         setControlProvider(controlProvider);
     }
 
@@ -155,6 +162,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
     public void setInContact(boolean val) {m_inContact = val;}
     public boolean getInContact() {return m_inContact;}
 
+    @Override
     public void setInitState(Vec2 initPos, Vec2 initVel) {
         m_initPos.set(initPos);
         m_initVel.set(initVel);
@@ -324,6 +332,11 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
         this.m_controlProvider = provider;
     }
 
+    @Override
+    public ControlProvider<BipedHopperControl> getControlProvider() {
+        return m_controlProvider;
+    }
+
     public BipedHopperControl getCurrentControl() {
         return m_controlProvider.getCurrControl();
     }
@@ -402,6 +415,26 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
         for (int i = 0; i < NUM_LEGS; i++) {
             updateSpring(m_thrustJoint[i], m_targetThrustSpringLength[i] - m_initThrustJointLength[i], THRUST_SPRING_PROP_GAIN, THRUST_SPRING_DRAG_GAIN, THRUST_SPRING_EXPONENT);
             updateSpring(m_springJoint[i], m_targetHopSpringLength[i] - m_initSpringJointLength[i], HOP_SPRING_PROP_GAIN, HOP_SPRING_DRAG_GAIN, HOP_SPRING_EXPONENT);
+        }
+    }
+
+    @Override
+    public void onBeginContact(Contact contact) {
+        //Start "in contact with ground" status if applicable
+        Body groundContactBody = getGroundContactBody();
+        if (contact.getFixtureA().getBody() == groundContactBody ||
+                contact.getFixtureB().getBody() == groundContactBody) {
+            setInContact(true);
+        }
+    }
+
+    @Override
+    public void onEndContact(Contact contact) {
+        //End "in contact with ground" status if applicable
+        Body groundContactBody = getGroundContactBody();
+        if (contact.getFixtureA().getBody() == groundContactBody ||
+                contact.getFixtureB().getBody() == groundContactBody) {
+            setInContact(false);
         }
     }
 
@@ -523,6 +556,55 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
         joint.setMotorSpeed(signForce > 0 ? BIG_NUMBER : -BIG_NUMBER);
 
         return force;
+    }
+
+    @Override
+    public void appendDebugTextLines(List<String> lines) {
+        super.appendDebugTextLines(lines);
+
+        lines.add("Control State: " + getControlState());
+        lines.add("Active Leg Spring Compression: " + numFormat.format(getActiveSpringJoint().getJointTranslation()));
+        lines.add("Body Vel X: " + numFormat.format(getMainBody().getLinearVelocity().x));
+        lines.add("Target Body Vel X: " + numFormat.format(((BipedHopperControl) getCurrentControl()).targetBodyVelX));
+        lines.add("Vel X Leg Gain: " + numFormat.format(((BipedHopperControl)getCurrentControl()).targetBodyVelXLegPlacementGain));
+        lines.add("Thrust offset: " + numFormat.format(((BipedHopperControl)getCurrentControl()).activeThrustDelta));
+        lines.add("Flight period: " + numFormat.format(m_currFlightPeriod));
+        lines.add("Stance period: " + numFormat.format(m_currStancePeriod));
+        lines.add("Target Spring Length: " + numFormat.format(m_targetThrustSpringLength[m_activeLegIdx]));
+    }
+
+    @Override
+    public void drawDebugInfo(DebugDraw dd) {
+        Transform bodyTransform = getMainBody().getTransform();
+
+        //Get target active & idle leg directions in world coords
+        Vec2 targetActiveLegDir = new Vec2(0.0f,-1.0f);
+        VecUtils.rotateLocal(targetActiveLegDir, m_targetActiveHipAngle);
+        VecUtils.rotateLocal(targetActiveLegDir, m_bodyPitch);
+        Vec2 activeLegTorqueLine = targetActiveLegDir.mul(m_activeHipTorque * 0.1f);
+        dd.drawSegment(bodyTransform.p, bodyTransform.p.add(targetActiveLegDir), new Color3f(1,0,0));
+//            dd.drawSegment(bodyTransform.p, bodyTransform.p.add(activeLegTorqueLine), new Color3f(1,0,1));
+
+        Vec2 targetIdleLegDir = new Vec2(0.0f,-1.0f);
+        VecUtils.rotateLocal(targetIdleLegDir, m_targetdIdleHipAngle);
+        VecUtils.rotateLocal(targetIdleLegDir, m_bodyPitch);
+        Vec2 idleLegTorqueLine = targetIdleLegDir.mul(m_idleHipTorque * 0.1f);
+        dd.drawSegment(bodyTransform.p, bodyTransform.p.add(targetIdleLegDir), new Color3f(0,1,0));
+//            dd.drawSegment(bodyTransform.p, bodyTransform.p.add(idleLegTorqueLine), new Color3f(0,1,1));
+
+        //Draw user input helper visuals (ie: visualize upcoming control parameters)
+        BipedHopperControl nextControl = m_controlProvider.getControlAtIdx(m_controlProvider.CurrControlIdx() + 1);
+        if (nextControl == null) //if no next control explicitly given, current control will continue
+            nextControl = m_controlProvider.getCurrControl();
+        Vec2 controlP = bodyTransform.p.add(new Vec2(0, 2.0f));
+        if (nextControl != null) {
+            dd.drawSolidCircle(controlP, 0.1f, new Vec2(0,1), new Color3f(1,1,1));
+            dd.drawSegment(controlP, controlP.add(new Vec2(nextControl.targetBodyVelX, 0.0f)), new Color3f(0,1,0));
+            dd.drawSegment(controlP, controlP.add(new Vec2(0.0f, nextControl.activeThrustDelta * 200.0f)), new Color3f(0,1,1));
+        }
+        //Compare current velocity to target
+        final float lineEps = -0.1f;
+        dd.drawSegment(controlP.add(new Vec2(0,lineEps)), controlP.add(new Vec2(getMainBody().getLinearVelocity().x, lineEps)), new Color3f(1,1,0));
     }
 
 }

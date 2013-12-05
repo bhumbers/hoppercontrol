@@ -1,23 +1,17 @@
 package edu.cmu.cs.graphics.hopper.explore;
 
-import com.thoughtworks.xstream.XStream;
+import edu.cmu.cs.graphics.hopper.control.AvatarDefinition;
 import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
+import edu.cmu.cs.graphics.hopper.control.BipedHopperDefinition;
 import edu.cmu.cs.graphics.hopper.oracle.ChallengeOracle;
 import edu.cmu.cs.graphics.hopper.oracle.UserOracle;
-import edu.cmu.cs.graphics.hopper.problems.ObstacleProblem;
-import edu.cmu.cs.graphics.hopper.problems.Problem;
-import edu.cmu.cs.graphics.hopper.problems.TerrainProblem;
+import edu.cmu.cs.graphics.hopper.problems.ObstacleProblemDefinition;
+import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 import org.apache.log4j.xml.DOMConfigurator;
-import org.box2d.proto.Box2D;
-import org.jbox2d.common.Vec2;
-import org.jbox2d.dynamics.World;
-import org.jbox2d.serialization.pb.PbDeserializer;
-import org.jbox2d.serialization.pb.PbSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class ExplorerMain {
@@ -29,15 +23,35 @@ public class ExplorerMain {
 
         log.info("Starting a control exploration...");
 
+//        //Terrain test
+//        Random r = new Random();
+//        r.setSeed(12345);
+//        int terrainLength = 100;
+//        float terrainDeltaX = 2.0f;
+//        float terrainMaxAmp = 4.0f;
+//        float y = 0.0f;
+//        List<Float> verts = new ArrayList<Float>(terrainLength);
+//        verts.add(0.01f);
+//        for (int i = 0; i < terrainLength; i++) {
+//            y = terrainMaxAmp*(r.nextFloat());
+//            if (y < 0)
+//                y = 0;
+//            verts.add(y);
+//        }
+//        terrain = new TerrainProblemDefinition(verts, terrainDeltaX);
+
         //Test problem set
-        List<Problem> problems = new ArrayList<Problem>();
-        problems.add(new ObstacleProblem(1,1));
+        List<ProblemDefinition> problems = new ArrayList<ProblemDefinition>();
+        problems.add(new ObstacleProblemDefinition(1,1));
+
+        //Test avatar
+        AvatarDefinition avatarDef = new BipedHopperDefinition();
 
         //Test oracle
         ChallengeOracle<BipedHopperControl> oracle = new UserOracle<BipedHopperControl>();
 
         Explorer explorer = new SimpleExplorer();
-        explorer.explore(problems, oracle);
+        explorer.explore(problems, avatarDef, oracle);
 
         //Box2D world serialization/deserialization test
 //        Vec2 gravity = new Vec2(0, -10f);

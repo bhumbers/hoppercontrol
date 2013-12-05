@@ -1,7 +1,13 @@
 package edu.cmu.cs.graphics.hopper;
 
+import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
+import edu.cmu.cs.graphics.hopper.control.BipedHopperDefinition;
+import edu.cmu.cs.graphics.hopper.control.ControlProvider;
 import edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests.BipedHopperTest;
+import edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests.ProblemInstanceTest;
 import edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests.WormTest;
+import edu.cmu.cs.graphics.hopper.problems.ObstacleProblemDefinition;
+import edu.cmu.cs.graphics.hopper.problems.ProblemInstance;
 import org.jbox2d.testbed.framework.*;
 import org.jbox2d.testbed.framework.j2d.TestPanelJ2D;
 
@@ -28,7 +34,13 @@ public class HopperTestbedMain {
 
         TestbedPanel panel = new TestPanelJ2D(model);
 
-        //TestList.populateModel(model);
+        ProblemInstanceTest piTest = new ProblemInstanceTest();
+        ControlProvider ctrlProvider = new ControlProvider<BipedHopperControl>(new BipedHopperControl());
+        ProblemInstance problem = new ProblemInstance((new ObstacleProblemDefinition(1.0f, 1.0f)), new BipedHopperDefinition(), ctrlProvider);
+        problem.init();
+        piTest.setProblem(problem);
+        model.addTest(piTest);
+
         model.addTest(new BipedHopperTest());
         model.addTest(new WormTest());
 

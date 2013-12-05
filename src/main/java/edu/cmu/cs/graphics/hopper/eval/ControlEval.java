@@ -2,7 +2,7 @@ package edu.cmu.cs.graphics.hopper.eval;
 
 import edu.cmu.cs.graphics.hopper.control.Avatar;
 import edu.cmu.cs.graphics.hopper.control.ControlPrim;
-import edu.cmu.cs.graphics.hopper.problems.Problem;
+import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.World;
 
@@ -11,7 +11,7 @@ import org.jbox2d.dynamics.World;
  public abstract class ControlEval {
     //Getters here mostly just to indicate data which should be attached to the eval object
     public abstract Avatar getAvatar();
-    public abstract Problem getProblem();
+    public abstract ProblemDefinition getProblem();
     public abstract ControlPrim getControlPrim();
 
     float currPrimTime;

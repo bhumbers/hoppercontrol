@@ -10,9 +10,10 @@ public class ControlProvider<C extends Control> {
     int currControlIdx;
     List<C> controls;
 
-    public ControlProvider() {
+    public ControlProvider(C initControl) {
         controls = new ArrayList<C>();
         currControlIdx = 0;
+        specifyControlForIndex(initControl, 0);
     }
 
     public int CurrControlIdx() {return currControlIdx;}

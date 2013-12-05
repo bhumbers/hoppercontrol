@@ -1,6 +1,5 @@
 package edu.cmu.cs.graphics.hopper.problems;
 
-import com.thoughtworks.xstream.XStream;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
 import org.jbox2d.collision.shapes.ChainShape;
 import org.jbox2d.collision.shapes.PolygonShape;
@@ -15,7 +14,7 @@ import java.util.List;
  * Represents some problem space for an avatar to navigate
  * Terrain problems use heightmap representations
  */
-public class TerrainProblem extends Problem {
+public class TerrainProblemDefinition extends ProblemDefinition {
     //Definition
     final protected List<Float> heights;
     final protected List<Float> peakXDeltas;
@@ -23,13 +22,13 @@ public class TerrainProblem extends Problem {
     protected Body terrainBody;
 
     /** Creates a new terrain problem with specified heights and constant peakXDelta between peak heights */
-    public TerrainProblem(List<Float> heights, float peakXDelta) {
+    public TerrainProblemDefinition(List<Float> heights, float peakXDelta) {
         this(heights, Collections.nCopies(heights.size() - 1, peakXDelta));
     }
 
     /** Creates a new terrain problem with specified heights and constant peakXDelta between peak heights
      * peakXDeltas should be heights.size() - 1 in length*/
-    public TerrainProblem(List<Float> heights, List<Float> peakXDeltas) {
+    public TerrainProblemDefinition(List<Float> heights, List<Float> peakXDeltas) {
         this.heights = new ArrayList<Float>();
         this.heights.addAll(heights);
 
@@ -58,12 +57,5 @@ public class TerrainProblem extends Problem {
         ChainShape shape = new ChainShape();
         shape.createChain(verts, verts.length);
         terrainBody.createFixture(shape, 0.0f);
-    }
-
-    @Override
-    public boolean runControlTest(ControlProvider ctrlProvider) {
-        //TODO
-
-        return true;
     }
 }
