@@ -200,31 +200,39 @@ public class ProblemInstanceTest extends TestbedTest {
             //Modify thrust (hop height) magnitude
             case 'w':
             {
-                BipedHopperControl nextControl = getNextControl();
-                nextControl.activeThrustDelta += THRUST_INCREMENT;
-                problem.getCtrlProvider().specifyControlForIndex(nextControl, problem.getCtrlProvider().CurrControlIdx() + 1);
+                if (problem != null) {
+                    BipedHopperControl nextControl = getNextControl();
+                    nextControl.activeThrustDelta += THRUST_INCREMENT;
+                    problem.getCtrlProvider().specifyControlForIndex(nextControl, problem.getCtrlProvider().CurrControlIdx() + 1);
+                }
                 break;
             }
             case 's':
             {
-                BipedHopperControl nextControl = getNextControl();
-                nextControl.activeThrustDelta -= THRUST_INCREMENT;
-                problem.getCtrlProvider().specifyControlForIndex(nextControl, problem.getCtrlProvider().CurrControlIdx() + 1);
+                if (problem != null) {
+                    BipedHopperControl nextControl = getNextControl();
+                    nextControl.activeThrustDelta -= THRUST_INCREMENT;
+                    problem.getCtrlProvider().specifyControlForIndex(nextControl, problem.getCtrlProvider().CurrControlIdx() + 1);
+                }
                 break;
             }
 
             case 'p':
             {
-                BipedHopperControl nextControl = getNextControl();
-                nextControl.targetBodyVelXLegPlacementGain += LEG_PLACEMENT_GAIN_INCREMENT;
-                problem.getCtrlProvider().specifyControlForIndex(nextControl, problem.getCtrlProvider().CurrControlIdx() + 1);
+                if (problem != null) {
+                    BipedHopperControl nextControl = getNextControl();
+                    nextControl.targetBodyVelXLegPlacementGain += LEG_PLACEMENT_GAIN_INCREMENT;
+                    problem.getCtrlProvider().specifyControlForIndex(nextControl, problem.getCtrlProvider().CurrControlIdx() + 1);
+                }
                 break;
             }
             case 'o':
             {
-                BipedHopperControl nextControl = getNextControl();
-                nextControl.targetBodyVelXLegPlacementGain -= LEG_PLACEMENT_GAIN_INCREMENT;
-                problem.getCtrlProvider().specifyControlForIndex(nextControl, problem.getCtrlProvider().CurrControlIdx() + 1);
+                if (problem != null) {
+                    BipedHopperControl nextControl = getNextControl();
+                    nextControl.targetBodyVelXLegPlacementGain -= LEG_PLACEMENT_GAIN_INCREMENT;
+                    problem.getCtrlProvider().specifyControlForIndex(nextControl, problem.getCtrlProvider().CurrControlIdx() + 1);
+                }
                 break;
             }
 
@@ -274,7 +282,7 @@ public class ProblemInstanceTest extends TestbedTest {
             case 'y':
                 getModel().getSettings().singleStep = true;
                 if (!getModel().getSettings().pause)
-                    getModel().getSettings().pause = true;
+                    gdddetModel().getSettings().pause = true;
                 break;
 
             //Scrub through saved states (pretty hacky for now)
