@@ -16,6 +16,10 @@ import java.util.Set;
 
 /** Runs automated explorations, given a problem set*/
 public abstract class Explorer<C extends Control> {
+
+    //If true, solutions from oracle are verified for correctness; if incorrect, sampled simulation is forwarded to the oracle for review
+    public static final boolean ENABLE_ORACLE_SOLUTION_VERIFICATION_REVIEW = true;
+
     private static final Logger log = LoggerFactory.getLogger(Explorer.class);
 
     protected final class SolvedProblemEntry {
@@ -108,16 +112,23 @@ public abstract class Explorer<C extends Control> {
                 numOracleChallenges++;
                 ControlProvider<C> challengeSolution = oracle.solveChallenge(challenge, avatarDef);
 
+                boolean oracleSolutionOk = true;
+
                 //DEBUGGING: Verify that oracle solution is correct.
-                ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, challengeSolution);
-                problem.setUseSampling(true); //for debugging
-                problem.init();
-                problem.run();
-                if (problem.getStatus() != ProblemInstance.ProblemStatus.SOLVED) {
-                    log.warn("Oracle returned an incorrect challenge solution. That shouldn't happen. ProblemDefinition hash: " + challenge.hashCode());
-                    oracle.sendForReview(problem);
+                if (ENABLE_ORACLE_SOLUTION_VERIFICATION_REVIEW) {
+                    challengeSolution.goToFirstControl();
+                    ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, challengeSolution);
+                    problem.setUseSampling(true); //for debugging
+                    problem.init();
+                    problem.run();
+                    if (problem.getStatus() != ProblemInstance.ProblemStatus.SOLVED) {
+                        log.warn("Oracle returned an incorrect challenge solution. That shouldn't happen. ProblemDefinition hash: " + challenge.hashCode());
+                        oracleSolutionOk = false;
+                        oracle.sendForReview(problem);
+                    }
                 }
-                else {
+
+                if (oracleSolutionOk)         {
                     log.info("Oracle successfully solved challenge; adding to list of solved problems: " + problemDef.toString());
                     markProblemSolved(challenge, challengeSolution);
                     onChallengeSolutionGiven(challengeSolution);
