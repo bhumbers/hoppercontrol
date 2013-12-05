@@ -113,7 +113,7 @@ public class BipedHopperTest extends TestbedTest {
     @Override
     public void keyPressed(char key, int argKeyCode) {
         float TARGET_VEL_INCREMENT_X = 0.5f;
-        float THRUST_INCREMENT = 0.001f;
+        float THRUST_INCREMENT = 0.1f;
         float LEG_PLACEMENT_GAIN_INCREMENT = 0.01f;
         float VEL_INCREMENT_X = 0.1f;
         float ANG_VEL_INCREMENT = 0.1f;

@@ -135,7 +135,7 @@ public class ProblemInstanceTest extends TestbedTest {
     @Override
     public void keyPressed(char key, int argKeyCode) {
         float TARGET_VEL_INCREMENT_X = 0.5f;
-        float THRUST_INCREMENT = 0.001f;
+        float THRUST_INCREMENT = 0.1f;
         float LEG_PLACEMENT_GAIN_INCREMENT = 0.01f;
         float VEL_INCREMENT_X = 0.1f;
         float ANG_VEL_INCREMENT = 0.1f;
@@ -372,7 +372,7 @@ public class ProblemInstanceTest extends TestbedTest {
 
         int nextControlIdx = provider.CurrControlIdx() + 1;
         BipedHopperControl nextControl = null;
-        //Append a new control if currently none is specified (ie: we're at the end of the prim's sequence)
+        //Create a new control if we're at or beyond the end of the prim's sequence
         //The new control by default takes on prior control step's values
         if (nextControlIdx >= provider.NumControls())
             nextControl = (BipedHopperControl)provider.getControlAtIdx(provider.NumControls() - 1).duplicate();

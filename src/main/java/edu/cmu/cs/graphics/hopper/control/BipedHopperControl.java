@@ -4,7 +4,7 @@ import java.text.DecimalFormat;
 
 /** Control parameters specific to a biped hopper */
 public class BipedHopperControl extends Control {
-    private static final float DEFAULT_ACTIVE_THRUST_LENGTH_DELTA = 0.002f;  //push down on spring during thrust
+    private static final float DEFAULT_ACTIVE_THRUST_LENGTH_DELTA = 0.3f;  //push down on spring during thrust
     private static final float DEFAULT_IDLE_THRUST_LENGTH_DELTA = -2.5f;   //tuck away
     private static final float DEFAULT_TARGET_VELOCITY_LEG_PLACEMENT_GAIN = 0.1f;
 

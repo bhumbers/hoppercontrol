@@ -34,7 +34,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
     final int NUM_LEGS = 2;
 
     private final float HIP_PROP_GAIN = 5000.0f;
-    private final float HIP_DRAG_GAIN = 500.0f;
+    private final float HIP_DRAG_GAIN = 1000.0f;
 
 //    private final float THRUST_SPRING_FREQUENCY = 50.0f; //Hz
 //    private final float THRUST_SPRING_DAMPING_RATIO = 0.8f;
@@ -44,7 +44,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
     private final float THRUST_SPRING_PROP_GAIN = 20000.0f;
     private final float THRUST_SPRING_DRAG_GAIN = 200.0f;
     private final float THRUST_SPRING_EXPONENT = 1.1f;
-    private final float HOP_SPRING_PROP_GAIN = 5000.0f;
+    private final float HOP_SPRING_PROP_GAIN = 3000.0f;
     private final float HOP_SPRING_DRAG_GAIN = 100.0f;
     private final float HOP_SPRING_EXPONENT = 1.0f;
 
@@ -71,6 +71,9 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
     public float m_currFlightPeriod;
     public float m_currStancePeriod;             //running count of time length of current support period (or 0 if not in support)
     public float m_nextStancePeriodEst;          //estimate of length of next period that active leg is touching ground
+
+    protected boolean m_lastHopAmpRecorded;      //reset at moment of takeoff, set once we record peak of hop
+    public float m_lastHopAmp;                   //hopping amplitude, as measured at peak of prior flight period
 
     //Joints (arrays where each index corresponds to one of the legs)
     public RevoluteJoint m_hipJoint[];
@@ -116,6 +119,9 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
         m_currFlightPeriod = 0.0f;
         m_currStancePeriod = 0.0f;
         m_nextStancePeriodEst = 1.0f; //TODO: What's a reasonable init value for this?
+
+        m_lastHopAmpRecorded = false;
+        m_lastHopAmp = 0.0f;
 
         m_bodies = new ArrayList<Body>();
         m_joints = new ArrayList<Joint>();
@@ -357,8 +363,11 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
                 break;
             case COMPRESS:
                 //Switch to thrusting once at or past fully compressed spring
-                if (m_springVel > 0)
+                if (m_springVel > 0)                  {
                     m_controlState = ControlState.THRUST;
+                    float lengthAtThrustStart = m_targetThrustSpringLength[m_activeLegIdx];
+                    m_targetThrustSpringLength[m_activeLegIdx] = lengthAtThrustStart + m_controlProvider.getCurrControl().activeThrustDelta;
+                }
                 break;
             case THRUST:
                 //Switch to flight once we leave the ground
@@ -366,6 +375,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
                     m_controlState = ControlState.FLIGHT;
                     m_nextStancePeriodEst = m_currStancePeriod; //estimate next support from current
                     swapActiveLeg();
+                    m_lastHopAmpRecorded = false;
                     m_currFlightPeriod = 0.0f;
 
                     //Advance to next control... this is a new hop
@@ -378,6 +388,11 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
         switch (m_controlState) {
             case FLIGHT:
                 servoLegPlacement(dt);
+                //Record max height noce we've started falling
+                if (!m_lastHopAmpRecorded && getMainBody().getLinearVelocity().y < 0){
+                    m_lastHopAmpRecorded = true;
+                    m_lastHopAmp = getMainBody().getPosition().y;
+                }
                 break;
             case LOAD:
                 //TODO
@@ -391,8 +406,8 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
                 //Add thrust back by pushing down on spring
                 //TODO: Correct thrust for desired hop height
                 //m_thrustSpring[m_activeLegIdx].setLength(UPPER_LEG_DEFAULT_LENGTH + 0.3f);
-                float lengthAtThrustStart = m_targetThrustSpringLength[m_activeLegIdx];
-                m_targetThrustSpringLength[m_activeLegIdx] = lengthAtThrustStart + m_controlProvider.getCurrControl().activeThrustDelta;
+//                float lengthAtThrustStart = m_targetThrustSpringLength[m_activeLegIdx];
+//                m_targetThrustSpringLength[m_activeLegIdx] = lengthAtThrustStart + m_controlProvider.getCurrControl().activeThrustDelta;
                 break;
             case UNLOAD:
                 //TODO
@@ -562,9 +577,10 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
         lines.add("Control State: " + getControlState());
         lines.add("Active Leg Spring Compression: " + numFormat.format(getActiveSpringJoint().getJointTranslation()));
         lines.add("Body Vel X: " + numFormat.format(getMainBody().getLinearVelocity().x));
-        lines.add("Target Body Vel X: " + numFormat.format(((BipedHopperControl) getCurrentControl()).targetBodyVelX));
-        lines.add("Vel X Leg Gain: " + numFormat.format(((BipedHopperControl)getCurrentControl()).targetBodyVelXLegPlacementGain));
-        lines.add("Thrust offset: " + numFormat.format(((BipedHopperControl)getCurrentControl()).activeThrustDelta));
+        lines.add("Target Body Vel X: " + numFormat.format(getCurrentControl().targetBodyVelX));
+        lines.add("Vel X Leg Gain: " + numFormat.format(getCurrentControl().targetBodyVelXLegPlacementGain));
+        lines.add("Thrust offset: " + numFormat.format(getCurrentControl().activeThrustDelta));
+        lines.add("Last Hop Amp: " + numFormat.format(m_lastHopAmp));
         lines.add("Flight period: " + numFormat.format(m_currFlightPeriod));
         lines.add("Stance period: " + numFormat.format(m_currStancePeriod));
         lines.add("Target Spring Length: " + numFormat.format(m_targetThrustSpringLength[m_activeLegIdx]));
@@ -597,7 +613,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
         if (nextControl != null) {
             dd.drawSolidCircle(controlP, 0.1f, new Vec2(0,1), new Color3f(1,1,1));
             dd.drawSegment(controlP, controlP.add(new Vec2(nextControl.targetBodyVelX, 0.0f)), new Color3f(0,1,0));
-            dd.drawSegment(controlP, controlP.add(new Vec2(0.0f, nextControl.activeThrustDelta * 200.0f)), new Color3f(0,1,1));
+            dd.drawSegment(controlP, controlP.add(new Vec2(0.0f, nextControl.activeThrustDelta * 10.0f)), new Color3f(0,1,1));
         }
         //Compare current velocity to target
         final float lineEps = -0.1f;
