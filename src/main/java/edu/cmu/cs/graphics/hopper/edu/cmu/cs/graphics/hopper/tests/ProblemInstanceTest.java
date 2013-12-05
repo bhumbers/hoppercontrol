@@ -43,6 +43,9 @@ public class ProblemInstanceTest extends TestbedTest {
 
     ProblemInstance problem;
 
+    //Current index for sampled worlds
+    int worldSampleIdx;
+
     //Problem that will be swapped in at next update (required for thread safety)
     ProblemInstance nextProblem;
 
@@ -60,6 +63,8 @@ public class ProblemInstanceTest extends TestbedTest {
         //Note: Synchronized to prevent swapping problem out while sim steps are ongoing
 
         this.problem = problem;
+
+        worldSampleIdx = 0;
 
         //Update this tests' simulation update params to match the problem
         if (problem != null) {
@@ -271,6 +276,26 @@ public class ProblemInstanceTest extends TestbedTest {
                 if (!getModel().getSettings().pause)
                     getModel().getSettings().pause = true;
                 break;
+
+            //Scrub through saved states (pretty hacky for now)
+            case '.':  {
+                    worldSampleIdx++;
+                    World sampledWorld = problem.getWorldSample(worldSampleIdx);
+                    if (sampledWorld != null) {
+                        m_world = sampledWorld;
+                        init(m_world, false);
+                    }
+                    break;
+            }
+            case ',':   {
+                worldSampleIdx--;
+                World sampledWorld = problem.getWorldSample(worldSampleIdx);
+                if (sampledWorld != null) {
+                    m_world = sampledWorld;
+                    init(m_world, false);
+                }
+                break;
+            }
         }
     }
 
@@ -332,12 +357,13 @@ public class ProblemInstanceTest extends TestbedTest {
                 addTextLine(debugTextLine);
 
             DebugDraw dd = getModel().getDebugDraw();
-            if (problem != null && problem.getAvatar() != null) {
+            if (problem.getAvatar() != null) {
                 Avatar avatar = problem.getAvatar();
                 avatar.drawDebugInfo(dd);
             }
 
             addTextLine("Problem status: " + problem.getStatus().toString());
+            addTextLine("Sample replay: " + worldSampleIdx + "/" + problem.getNumWorldSamples());
         }
         //Otherwise, indicate our waiting status
         else {

@@ -25,6 +25,8 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
     /** The problem "runner" */
     ProblemInstanceTest test;
 
+    TestbedModel model;
+
         public UserOracle() {
             //Init the GUI window
             initGUI();
@@ -37,7 +39,7 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
         } catch (Exception e) {
             log.warn("Could not set the look and feel to nimbus.  ");
         }
-        TestbedModel model = new TestbedModel();
+        model = new TestbedModel();
 
         //Not fun, but the hopper avatar requires a *lot* of iterations/short timestep to converge
         //Hoping this can be reduced by tweaking how we use joints, but not sure...
@@ -67,6 +69,7 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
         //TODO: Send problem to GUI, wait for user to complete, return provided control
 
         ProblemInstance problem = new ProblemInstance(problemDef, avatarDef);
+        problem.setUseSampling(true); //for debugging
         problem.init();
 
         test.setProblem(problem);
@@ -85,5 +88,23 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
         test.setProblem(null);
 
         return problem.getCtrlProvider();
+    }
+
+    @Override
+    public void sendForReview(ProblemInstance problem) {
+        model.getSettings().pause = true;
+        test.setProblem(problem);
+        test.reset();
+
+        //Just run forever, for now
+        //TODO: add a way for user to exit review
+        while (true) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                log.error("Exception occurred while waiting for user to finish reviewing a problem instance");
+                e.printStackTrace();
+            }
+        }
     }
 }

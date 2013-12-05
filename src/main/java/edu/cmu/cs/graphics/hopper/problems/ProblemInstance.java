@@ -4,6 +4,7 @@ import edu.cmu.cs.graphics.hopper.control.Avatar;
 import edu.cmu.cs.graphics.hopper.control.AvatarDefinition;
 import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
+import org.box2d.proto.Box2D;
 import org.jbox2d.callbacks.ContactImpulse;
 import org.jbox2d.callbacks.ContactListener;
 import org.jbox2d.collision.Manifold;
@@ -14,8 +15,13 @@ import org.jbox2d.dynamics.BodyDef;
 import org.jbox2d.dynamics.FixtureDef;
 import org.jbox2d.dynamics.World;
 import org.jbox2d.dynamics.contacts.Contact;
+import org.jbox2d.serialization.pb.PbDeserializer;
+import org.jbox2d.serialization.pb.PbSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /** An instantiated, runnable problem created from some problem definition
  * (contains a lot of dynamic state; meant for a singe sim run & done)/.
@@ -23,6 +29,17 @@ import org.slf4j.LoggerFactory;
  * but we cut out a lot of the GUI-specific stuff so it's more amenable to auto-sims. */
 public class ProblemInstance implements
         ContactListener {
+
+    /** A sampled state of the problem's world at a particular sim time */
+    protected final class WorldSample {
+        final float simTime;
+        final Box2D.PbWorld serializedWorld;
+
+        WorldSample(float simTime, Box2D.PbWorld serializedWorld) {
+            this.simTime = simTime;
+            this.serializedWorld = serializedWorld;
+        }
+    }
 
     public enum ProblemStatus {
         RUNNING,
@@ -53,6 +70,11 @@ public class ProblemInstance implements
     public boolean substepping;
     public boolean continuousCollision;
 
+    //Serializers for state sampling
+    boolean useSampling;
+    List<WorldSample> worldSamples;
+    PbSerializer serializer = new PbSerializer();
+    PbDeserializer deserializer = new PbDeserializer();
 
     protected ControlProvider givenCtrlProvider;
 
@@ -66,6 +88,18 @@ public class ProblemInstance implements
         this.problemDef = problemDef;
         this.avatarDef = avatarDef;
         this.givenCtrlProvider = ctrlProvider;
+
+        worldSamples = new ArrayList<WorldSample>();
+
+        //By default, don't use sampling (only necessary for debugging in most cases)
+        setUseSampling(false);
+    }
+
+    /** Sets whether or not world states are sampled at regular simulation timesteps.
+     * Useful for debugging, but uses more memory and may slow down performance.
+     * Default is off. */
+    public void setUseSampling(boolean val) {
+        useSampling = val;
     }
 
     public float getSimTime() {return simTime;}
@@ -76,6 +110,9 @@ public class ProblemInstance implements
         if (avatar != null)
             return avatar.getControlProvider();
         return null;
+    }
+    public int getNumWorldSamples() {
+        return worldSamples.size();
     }
 
     public void init() {
@@ -91,6 +128,10 @@ public class ProblemInstance implements
         warmStarting = true;
         substepping =  false;
         continuousCollision = true;
+
+        //TODO: This really should be cleared here, but I'm preventing that to hack in
+        // ability to review prior problem instance runs in GUI. -bh, 12.5.2013
+//        worldSamples.clear();
 
         Vec2 gravity = new Vec2(0, -10f);
         world = new World(gravity);
@@ -159,6 +200,23 @@ public class ProblemInstance implements
             status = ProblemStatus.SOLVED;
         else
             status = ProblemStatus.RUNNING;
+
+        //If sampling is enabled and enough time has passed, store a sample
+        float samplingTimestep = 1.0f / 10.0f; //10 Hz
+        if (useSampling &&
+                (worldSamples.size() == 0 ||
+                (simTime - worldSamples.get(worldSamples.size() - 1).simTime) >= samplingTimestep))
+        {
+            worldSamples.add(new WorldSample(simTime, serializer.serializeWorld(world).build()));
+        }
+    }
+
+    /** Returns sim World at given sampled index in sample list (if available)
+     * The returned object is a deep copy of the sampled world, so do with it what you will. */
+    public World getWorldSample(int sampleIdx) {
+        if (sampleIdx >= 0 && sampleIdx < worldSamples.size())
+           return deserializer.deserializeWorld(worldSamples.get(sampleIdx).serializedWorld);
+        return null;
     }
 
     @Override

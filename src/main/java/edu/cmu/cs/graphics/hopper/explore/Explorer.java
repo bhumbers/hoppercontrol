@@ -110,10 +110,12 @@ public abstract class Explorer<C extends Control> {
 
                 //DEBUGGING: Verify that oracle solution is correct.
                 ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, challengeSolution);
+                problem.setUseSampling(true); //for debugging
                 problem.init();
                 problem.run();
                 if (problem.getStatus() != ProblemInstance.ProblemStatus.SOLVED) {
                     log.warn("Oracle returned an incorrect challenge solution. That shouldn't happen. ProblemDefinition hash: " + challenge.hashCode());
+                    oracle.sendForReview(problem);
                 }
                 else {
                     log.info("Oracle successfully solved challenge; adding to list of solved problems: " + problemDef.toString());
