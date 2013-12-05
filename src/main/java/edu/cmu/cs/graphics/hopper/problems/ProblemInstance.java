@@ -2,6 +2,7 @@ package edu.cmu.cs.graphics.hopper.problems;
 
 import edu.cmu.cs.graphics.hopper.control.Avatar;
 import edu.cmu.cs.graphics.hopper.control.AvatarDefinition;
+import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
 import org.jbox2d.callbacks.ContactImpulse;
 import org.jbox2d.callbacks.ContactListener;
@@ -104,7 +105,7 @@ public class ProblemInstance implements
             //TODO: move this to problem or avatar def... just useful to hardcode for now
             final float INIT_VEL_X = 1.0f;
             avatar.setInitState(new Vec2(-10.0f, 8.0f), new Vec2(INIT_VEL_X, 0.0f));
-//            ctrlProvider.getCurrControl().targetBodyVelX = INIT_VEL_X;
+            ((ControlProvider<BipedHopperControl>)avatar.getControlProvider()).getCurrControl().targetBodyVelX = INIT_VEL_X;
 
             avatar.init(world);
         }
