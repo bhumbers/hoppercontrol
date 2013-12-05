@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -34,6 +35,10 @@ public abstract class Explorer<C extends Control> {
     public int getNumTests() {return numTests;}
     public int getNumOracleChallenges() {return numOracleChallenges;}
 
+    public int getNumProblems() {return getNumSolvedProblems() + getNumUnsolvedProblems();}
+    public int getNumUnsolvedProblems() {return unsolvedProblems.size();}
+    public int getNumSolvedProblems() {return solvedProblems.size();}
+
     ChallengeOracle<C> oracle;
 
     AvatarDefinition avatarDef;
@@ -52,9 +57,11 @@ public abstract class Explorer<C extends Control> {
         numOracleChallenges = 0;
         this.oracle = oracle;
         this.avatarDef = avatarDef;
-        unsolvedProblems = new HashSet<ProblemDefinition>();
-        solvedProblems = new HashSet<SolvedProblemEntry>();
-        oracleChallengeProblems = new HashSet<ProblemDefinition>();
+
+        //Note: Linked hash sets used to preserve insertion ordering for iteration
+        unsolvedProblems = new LinkedHashSet<ProblemDefinition>();
+        solvedProblems = new LinkedHashSet<SolvedProblemEntry>();
+        oracleChallengeProblems = new LinkedHashSet<ProblemDefinition>();
 
         unsolvedProblems.addAll(problems);
 

@@ -163,7 +163,12 @@ public class ProblemInstanceTest extends TestbedTest {
 //                break;
         }
 
-        List<Body> bodies = problem.getAvatar().getBodies();
+        List<Body> bodies = null;
+        if (problem != null)
+            problem.getAvatar().getBodies();
+        else
+            bodies = new ArrayList<Body>();
+
         switch (key) {
 //            //Save control sequence to disk
 //            case 'g':

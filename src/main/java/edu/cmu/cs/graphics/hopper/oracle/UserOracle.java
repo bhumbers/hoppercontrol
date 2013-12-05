@@ -50,7 +50,7 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
         model.addTest(test);
 
         TestbedFrame testbed = new TestbedFrame(model, panel, TestbedController.UpdateBehavior.UPDATE_CALLED);
-        testbed.setSize(1200, 700);
+        testbed.setSize(800, 700);
         testbed.setVisible(true);
 
         //Biped hopper is only stable at short timesteps

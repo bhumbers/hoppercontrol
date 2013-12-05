@@ -42,8 +42,8 @@ public class ExplorerMain {
 
         //Test problem set
         List<ProblemDefinition> problems = new ArrayList<ProblemDefinition>();
-        for (int i = 1; i < 5; i++) {
-            for (int j = 1; j < 5; j++) {
+        for (int i = 1; i < 10; i++) {
+            for (int j = 1; j < 10; j++) {
                 problems.add(new ObstacleProblemDefinition(i,j));
             }
         }
@@ -68,6 +68,7 @@ public class ExplorerMain {
 
 
         log.info("Control exploration COMPLETE");
+        log.info("Problems solved:          " + explorer.getNumSolvedProblems() + "/" + explorer.getNumProblems());
         log.info("Sim Tests used:           " + explorer.getNumTests());
         log.info("Oracle Challenges issued: " + explorer.getNumOracleChallenges());
     }
