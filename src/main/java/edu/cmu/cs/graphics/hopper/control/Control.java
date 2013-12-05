@@ -4,4 +4,7 @@ package edu.cmu.cs.graphics.hopper.control;
 public abstract class Control {
     /** Creates a deep copy of this control object */
     public abstract Control duplicate();
+
+    /** Instantiate control from a dense numeric array */
+    public abstract Control fromNumericArray(float[] vals);
 }

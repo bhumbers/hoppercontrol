@@ -1,12 +1,12 @@
 package edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests;
 
 import com.jogamp.newt.event.KeyEvent;
+import com.thoughtworks.xstream.XStream;
 import edu.cmu.cs.graphics.hopper.control.BipedHopper;
 import edu.cmu.cs.graphics.hopper.VecUtils;
 import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
 import edu.cmu.cs.graphics.hopper.problems.ObstacleProblem;
-import edu.cmu.cs.graphics.hopper.problems.TerrainProblem;
 import org.jbox2d.callbacks.ContactImpulse;
 import org.jbox2d.callbacks.DebugDraw;
 import org.jbox2d.collision.Manifold;
@@ -18,10 +18,8 @@ import org.jbox2d.dynamics.joints.*;
 import org.jbox2d.testbed.framework.TestbedSettings;
 import org.jbox2d.testbed.framework.TestbedTest;
 
+import java.io.*;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
 
 
 /** Main scene setup and control update class for BipedHoppper
@@ -36,6 +34,8 @@ public class BipedHopperTest extends TestbedTest {
 
     static DecimalFormat numFormat = new DecimalFormat( "#,###,###,##0.000" );
 
+    XStream xstream;
+
     float simTime = 0.0f;                  //total simulation time
 
     BipedHopper m_hopper;
@@ -46,6 +46,14 @@ public class BipedHopperTest extends TestbedTest {
     float obsW = 1.0f; float obsH = 1.0f; //obstacle width, height *applied on next world init*
 
     boolean m_followAvatar;
+
+    public BipedHopperTest() {
+        super();
+        xstream = new XStream();
+        xstream.alias("CtrlProvider", ControlProvider.class);
+        xstream.alias("BipedCtrl", BipedHopperControl.class);
+        xstream.omitField(ControlProvider.class, "currControlIdx");
+    }
 
     @Override
     public Long getTag(Body argBody) {
@@ -130,7 +138,7 @@ public class BipedHopperTest extends TestbedTest {
 
         provider = new ControlProvider<BipedHopperControl>();
         provider.specifyControlForIndex(new BipedHopperControl(), 0);
-        provider.getCurrControl().m_targetBodyVelX = INIT_VEL_X;
+        provider.getCurrControl().targetBodyVelX = INIT_VEL_X;
         m_hopper.setControlProvider(provider);
 
         m_followAvatar = true;
@@ -190,18 +198,24 @@ public class BipedHopperTest extends TestbedTest {
         }
 
         switch (key) {
+            //Save control sequence to disk
+            case 'g':
+                {
+                    saveControlSequence();
+                }
+
             //Modify target velocity
             case 'd':
                 {
                     BipedHopperControl nextControl = getNextControl();
-                    nextControl.m_targetBodyVelX += TARGET_VEL_INCREMENT_X;
+                    nextControl.targetBodyVelX += TARGET_VEL_INCREMENT_X;
                     provider.specifyControlForIndex(nextControl, provider.CurrControlIdx() + 1);
                     break;
                 }
             case 'a':
             {
                 BipedHopperControl nextControl = getNextControl();
-                nextControl.m_targetBodyVelX -= TARGET_VEL_INCREMENT_X;
+                nextControl.targetBodyVelX -= TARGET_VEL_INCREMENT_X;
                 provider.specifyControlForIndex(nextControl, provider.CurrControlIdx() + 1);
                 break;
             }
@@ -210,14 +224,14 @@ public class BipedHopperTest extends TestbedTest {
             case 'w':
             {
                 BipedHopperControl nextControl = getNextControl();
-                nextControl.m_activeThrustDelta += THRUST_INCREMENT;
+                nextControl.activeThrustDelta += THRUST_INCREMENT;
                 provider.specifyControlForIndex(nextControl, provider.CurrControlIdx() + 1);
                 break;
             }
             case 's':
             {
                 BipedHopperControl nextControl = getNextControl();
-                nextControl.m_activeThrustDelta -= THRUST_INCREMENT;
+                nextControl.activeThrustDelta -= THRUST_INCREMENT;
                 provider.specifyControlForIndex(nextControl, provider.CurrControlIdx() + 1);
                 break;
             }
@@ -225,14 +239,14 @@ public class BipedHopperTest extends TestbedTest {
             case 'p':
             {
                 BipedHopperControl nextControl = getNextControl();
-                nextControl.m_targetBodyVelXLegPlacementGain += LEG_PLACEMENT_GAIN_INCREMENT;
+                nextControl.targetBodyVelXLegPlacementGain += LEG_PLACEMENT_GAIN_INCREMENT;
                 provider.specifyControlForIndex(nextControl, provider.CurrControlIdx() + 1);
                 break;
             }
             case 'o':
             {
                 BipedHopperControl nextControl = getNextControl();
-                nextControl.m_targetBodyVelXLegPlacementGain -= LEG_PLACEMENT_GAIN_INCREMENT;
+                nextControl.targetBodyVelXLegPlacementGain -= LEG_PLACEMENT_GAIN_INCREMENT;
                 provider.specifyControlForIndex(nextControl, provider.CurrControlIdx() + 1);
                 break;
             }
@@ -358,9 +372,9 @@ public class BipedHopperTest extends TestbedTest {
             addTextLine("Control State: " + m_hopper.getControlState());
             addTextLine("Active Leg Spring Compression: " + numFormat.format(m_hopper.getActiveSpringJoint().getJointTranslation()));
             addTextLine("Body Vel X: " + numFormat.format(m_hopper.getMainBody().getLinearVelocity().x));
-            addTextLine("Target Body Vel X: " + numFormat.format(((BipedHopperControl) m_hopper.getCurrentControl()).m_targetBodyVelX));
-            addTextLine("Vel X Leg Gain: " + numFormat.format(((BipedHopperControl)m_hopper.getCurrentControl()).m_targetBodyVelXLegPlacementGain));
-            addTextLine("Thrust offset: " + numFormat.format(((BipedHopperControl)m_hopper.getCurrentControl()).m_activeThrustDelta));
+            addTextLine("Target Body Vel X: " + numFormat.format(((BipedHopperControl) m_hopper.getCurrentControl()).targetBodyVelX));
+            addTextLine("Vel X Leg Gain: " + numFormat.format(((BipedHopperControl)m_hopper.getCurrentControl()).targetBodyVelXLegPlacementGain));
+            addTextLine("Thrust offset: " + numFormat.format(((BipedHopperControl)m_hopper.getCurrentControl()).activeThrustDelta));
             addTextLine("Flight period: " + numFormat.format(m_hopper.m_currFlightPeriod));
             addTextLine("Stance period: " + numFormat.format(m_hopper.m_currStancePeriod));
             addTextLine("Target Spring Length: " + numFormat.format(m_hopper.m_targetThrustSpringLength[m_hopper.m_activeLegIdx]));
@@ -423,15 +437,22 @@ public class BipedHopperTest extends TestbedTest {
             VecUtils.rotateLocal(targetActiveLegDir, m_hopper.m_bodyPitch);
             Vec2 activeLegTorqueLine = targetActiveLegDir.mul(m_hopper.m_activeHipTorque * 0.1f);
             dd.drawSegment(bodyTransform.p, bodyTransform.p.add(targetActiveLegDir), new Color3f(1,0,0));
-            dd.drawSegment(bodyTransform.p, bodyTransform.p.add(activeLegTorqueLine), new Color3f(1,0,1));
+//            dd.drawSegment(bodyTransform.p, bodyTransform.p.add(activeLegTorqueLine), new Color3f(1,0,1));
 
             Vec2 targetIdleLegDir = new Vec2(0.0f,-1.0f);
             VecUtils.rotateLocal(targetIdleLegDir, m_hopper.m_targetdIdleHipAngle);
             VecUtils.rotateLocal(targetIdleLegDir, m_hopper.m_bodyPitch);
             Vec2 idleLegTorqueLine = targetIdleLegDir.mul(m_hopper.m_idleHipTorque * 0.1f);
             dd.drawSegment(bodyTransform.p, bodyTransform.p.add(targetIdleLegDir), new Color3f(0,1,0));
-            dd.drawSegment(bodyTransform.p, bodyTransform.p.add(idleLegTorqueLine), new Color3f(0,1,1));
+//            dd.drawSegment(bodyTransform.p, bodyTransform.p.add(idleLegTorqueLine), new Color3f(0,1,1));
 
+            //Draw user input helper visuals
+            final float lineEps = -0.1f;
+            Vec2 controlP = bodyTransform.p.add(new Vec2(0, 2.0f));
+            dd.drawSolidCircle(controlP, 0.1f, new Vec2(0,1), new Color3f(1,1,1));
+            dd.drawSegment(controlP, controlP.add(new Vec2(getNextControl().targetBodyVelX, 0.0f)), new Color3f(0,1,0));
+            dd.drawSegment(controlP.add(new Vec2(0,lineEps)), controlP.add(new Vec2(m_hopper.getMainBody().getLinearVelocity().x, lineEps)), new Color3f(1,1,0));
+            dd.drawSegment(controlP, controlP.add(new Vec2(0.0f, getNextControl().activeThrustDelta * 200.0f)), new Color3f(0,1,1));
         }
     }
 
@@ -446,6 +467,26 @@ public class BipedHopperTest extends TestbedTest {
         else
             nextControl = (BipedHopperControl)provider.getControlAtIdx(nextControlIdx);
         return nextControl;
+    }
+
+    private void saveControlSequence() {
+        String fileName = "blah.csq";
+        String sequenceXML = xstream.toXML(provider);
+        log.info("Saved control sequence to file: " + fileName);
+
+        Writer writer = null;
+        try {
+            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), "utf-8"));
+            writer.write(sequenceXML);
+        } catch (IOException ex) {
+            log.error("Error writing control sequence to file: " + fileName + "; " + ex.getStackTrace().toString());
+        } finally {
+            try {
+                writer.close();
+            } catch (Exception ex) {
+                log.warn("Exception while closing a control sequence file: " + fileName + "; " + ex.getStackTrace().toString());
+            }
+        }
     }
 }
 

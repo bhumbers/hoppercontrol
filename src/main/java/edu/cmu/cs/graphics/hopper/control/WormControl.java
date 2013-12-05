@@ -22,6 +22,14 @@ public class WormControl extends Control {
     }
 
     @Override
+    public Control fromNumericArray(float[] vals) {
+        int numLinks = vals.length;
+        WormControl control = new WormControl(numLinks);
+        System.arraycopy(vals, 0, control.targetLinkAngles, 0, vals.length);
+        return control;
+    }
+
+    @Override
     public String toString() {
         String str = "";
         for (float targetLinkAngle : targetLinkAngles) {

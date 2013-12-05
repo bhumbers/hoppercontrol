@@ -4,46 +4,58 @@ import java.text.DecimalFormat;
 
 /** Control parameters specific to a biped hopper */
 public class BipedHopperControl extends Control {
-    private final float DEFAULT_ACTIVE_THRUST_LENGTH_DELTA = 0.002f;  //push down on spring during thrust
-    private final float DEFAULT_IDLE_THRUST_LENGTH_DELTA = -2.5f;   //tuck away
-    private final float DEFAULT_TARGET_VELOCITY_LEG_PLACEMENT_GAIN = 0.1f;
+    private static final float DEFAULT_ACTIVE_THRUST_LENGTH_DELTA = 0.002f;  //push down on spring during thrust
+    private static final float DEFAULT_IDLE_THRUST_LENGTH_DELTA = -2.5f;   //tuck away
+    private static final float DEFAULT_TARGET_VELOCITY_LEG_PLACEMENT_GAIN = 0.1f;
 
-    public float m_activeThrustDelta;       //offset to thrust piston used during thrust phase (affects hopping height)
-    public float m_idleThrustDelta;
-    public float m_targetBodyVelX;
-    public float m_targetBodyPitch;         //target angle of main hopper body *relative to world coordinate frame*
-    public float m_targetBodyVelXLegPlacementGain;
+    public float activeThrustDelta;       //offset to thrust piston used during thrust phase (affects hopping height)
+    public float idleThrustDelta;
+    public float targetBodyVelX;
+    public float targetBodyPitch;         //target angle of main hopper body *relative to world coordinate frame*
+    public float targetBodyVelXLegPlacementGain;
 
     //For debug string output
     static DecimalFormat strFormat = new DecimalFormat( "#,###,###,##0.000" );
 
     public BipedHopperControl() {
-        m_activeThrustDelta = DEFAULT_ACTIVE_THRUST_LENGTH_DELTA;
-        m_idleThrustDelta = DEFAULT_IDLE_THRUST_LENGTH_DELTA;
-        m_targetBodyVelX = 0.0f;
-        m_targetBodyPitch = 0.0f;
-        m_targetBodyVelXLegPlacementGain = DEFAULT_TARGET_VELOCITY_LEG_PLACEMENT_GAIN;
+        activeThrustDelta = DEFAULT_ACTIVE_THRUST_LENGTH_DELTA;
+        idleThrustDelta = DEFAULT_IDLE_THRUST_LENGTH_DELTA;
+        targetBodyVelX = 0.0f;
+        targetBodyPitch = 0.0f;
+        targetBodyVelXLegPlacementGain = DEFAULT_TARGET_VELOCITY_LEG_PLACEMENT_GAIN;
     }
 
     @Override
     public Control duplicate() {
         BipedHopperControl copy = new BipedHopperControl();
-        copy.m_activeThrustDelta = this.m_activeThrustDelta;
-        copy.m_idleThrustDelta = this.m_idleThrustDelta;
-        copy.m_targetBodyVelX = this.m_targetBodyVelX;
-        copy.m_targetBodyPitch = this.m_targetBodyPitch;
-        copy.m_targetBodyVelXLegPlacementGain = m_targetBodyVelXLegPlacementGain;
+        copy.activeThrustDelta = this.activeThrustDelta;
+        copy.idleThrustDelta = this.idleThrustDelta;
+        copy.targetBodyVelX = this.targetBodyVelX;
+        copy.targetBodyPitch = this.targetBodyPitch;
+        copy.targetBodyVelXLegPlacementGain = targetBodyVelXLegPlacementGain;
         return copy;
+    }
+
+    @Override
+    public Control fromNumericArray(float[] vals) {
+        BipedHopperControl control = new BipedHopperControl();
+        int valIdx = 0;
+        control.activeThrustDelta = vals[valIdx++];
+        control.idleThrustDelta = vals[valIdx++];
+        control.targetBodyVelX = vals[valIdx++];
+        control.targetBodyPitch = vals[valIdx++];
+        control.targetBodyVelXLegPlacementGain = vals[valIdx++];
+        return control;
     }
 
     @Override
     public String toString() {
         String str = "";
-        str += "Active Thrust:  " + strFormat.format(m_activeThrustDelta) + " ";
-        str += "Idle Thrust:    " + strFormat.format(m_idleThrustDelta) + " ";
-        str += "Target VelX:    " + strFormat.format(m_targetBodyVelX) + " ";
-        str += "Target Pitch:   " + strFormat.format(m_targetBodyPitch) + " ";
-        str += "Leg Place Gain: " + strFormat.format(m_targetBodyVelXLegPlacementGain) + " ";
+        str += "Active Thrust:  " + strFormat.format(activeThrustDelta) + " ";
+        str += "Idle Thrust:    " + strFormat.format(idleThrustDelta) + " ";
+        str += "Target VelX:    " + strFormat.format(targetBodyVelX) + " ";
+        str += "Target Pitch:   " + strFormat.format(targetBodyPitch) + " ";
+        str += "Leg Place Gain: " + strFormat.format(targetBodyVelXLegPlacementGain) + " ";
         return str;
     }
 }

@@ -1,6 +1,7 @@
 package edu.cmu.cs.graphics.hopper.problems;
 
 import com.thoughtworks.xstream.XStream;
+import edu.cmu.cs.graphics.hopper.control.ControlProvider;
 import org.jbox2d.collision.shapes.ChainShape;
 import org.jbox2d.collision.shapes.PolygonShape;
 import org.jbox2d.common.Vec2;
@@ -15,8 +16,9 @@ import java.util.List;
  * Terrain problems use heightmap representations
  */
 public class TerrainProblem extends Problem {
-    protected List<Float> heights;
-    protected List<Float> peakXDeltas;
+    //Definition
+    final protected List<Float> heights;
+    final protected List<Float> peakXDeltas;
 
     protected Body terrainBody;
 
@@ -56,5 +58,12 @@ public class TerrainProblem extends Problem {
         ChainShape shape = new ChainShape();
         shape.createChain(verts, verts.length);
         terrainBody.createFixture(shape, 0.0f);
+    }
+
+    @Override
+    public boolean runControlTest(ControlProvider ctrlProvider) {
+        //TODO
+
+        return true;
     }
 }

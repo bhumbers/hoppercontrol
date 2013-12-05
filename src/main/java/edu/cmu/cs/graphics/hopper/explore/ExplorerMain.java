@@ -1,6 +1,11 @@
 package edu.cmu.cs.graphics.hopper.explore;
 
 import com.thoughtworks.xstream.XStream;
+import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
+import edu.cmu.cs.graphics.hopper.oracle.ChallengeOracle;
+import edu.cmu.cs.graphics.hopper.oracle.UserOracle;
+import edu.cmu.cs.graphics.hopper.problems.ObstacleProblem;
+import edu.cmu.cs.graphics.hopper.problems.Problem;
 import edu.cmu.cs.graphics.hopper.problems.TerrainProblem;
 import org.apache.log4j.xml.DOMConfigurator;
 import org.box2d.proto.Box2D;
@@ -22,8 +27,17 @@ public class ExplorerMain {
     public static void main(String[] args) {
         DOMConfigurator.configure("config/log4j.xml");
 
+        log.info("Starting a control exploration...");
+
+        //Test problem set
+        List<Problem> problems = new ArrayList<Problem>();
+        problems.add(new ObstacleProblem(1,1));
+
+        //Test oracle
+        ChallengeOracle<BipedHopperControl> oracle = new UserOracle<BipedHopperControl>();
+
         Explorer explorer = new SimpleExplorer();
-        explorer.explore();
+        explorer.explore(problems, oracle);
 
         //Box2D world serialization/deserialization test
 //        Vec2 gravity = new Vec2(0, -10f);
@@ -34,11 +48,7 @@ public class ExplorerMain {
 //        World world2 = deserializer.deserializeWorld(serializedWorld);
 //        System.out.println(world2.toString());
 
-        //Xstream serialization test
-        XStream xstream = new XStream();
-        xstream.alias("terrainproblem", TerrainProblem.class);
-        TerrainProblem blah = new TerrainProblem(new ArrayList<Float>(Arrays.asList(1.0f, 2.0f, 3.0f)), 42);
 
-        log.debug("Blah: " + xstream.toXML(blah));
+        log.info("Control exploration COMPLETE");
     }
 }

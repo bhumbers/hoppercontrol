@@ -382,7 +382,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
                 //TODO: Correct thrust for desired hop height
                 //m_thrustSpring[m_activeLegIdx].setLength(UPPER_LEG_DEFAULT_LENGTH + 0.3f);
                 float lengthAtThrustStart = m_targetThrustSpringLength[m_activeLegIdx];
-                m_targetThrustSpringLength[m_activeLegIdx] = lengthAtThrustStart + m_controlProvider.getCurrControl().m_activeThrustDelta;
+                m_targetThrustSpringLength[m_activeLegIdx] = lengthAtThrustStart + m_controlProvider.getCurrControl().activeThrustDelta;
                 break;
             case UNLOAD:
                 //TODO
@@ -414,7 +414,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
     }
 
     protected void servoBodyPitch() {
-        float targetActiveHipAngle = m_bodyPitch - m_controlProvider.getCurrControl().m_targetBodyPitch;
+        float targetActiveHipAngle = m_bodyPitch - m_controlProvider.getCurrControl().targetBodyPitch;
         m_activeHipTorque = servoTowardAngle(m_hipJoint[m_activeLegIdx], targetActiveHipAngle, HIP_PROP_GAIN, HIP_DRAG_GAIN);
     }
 
@@ -431,7 +431,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
         //(to make this gradual, use lerp on current value (hacky, but seems to work well))
         float alpha = Math.min(1.0f, 5.0f * dt);
 
-        float idleLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH + m_controlProvider.getCurrControl().m_idleThrustDelta;
+        float idleLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH + m_controlProvider.getCurrControl().idleThrustDelta;
         float activeLegTerminalLength = UPPER_LEG_DEFAULT_LENGTH;
 
 //        if (NUM_LEGS > 1)
@@ -445,8 +445,8 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
 
         /////// ANGLE /////////////////////////////////////////////////////////////////////////////
         //Set leg position using hip based on desired landing location
-        float deltaFromTargetVel = m_bodyVel.x - m_controlProvider.getCurrControl().m_targetBodyVelX;
-        float desiredLandingOffsetX = (0.5f * m_bodyVel.x * m_nextStancePeriodEst) + (m_controlProvider.getCurrControl().m_targetBodyVelXLegPlacementGain * deltaFromTargetVel);
+        float deltaFromTargetVel = m_bodyVel.x - m_controlProvider.getCurrControl().targetBodyVelX;
+        float desiredLandingOffsetX = (0.5f * m_bodyVel.x * m_nextStancePeriodEst) + (m_controlProvider.getCurrControl().targetBodyVelXLegPlacementGain * deltaFromTargetVel);
 
         //Bound to some reasonable range
         float maxAllowedOffsetX = 0.5f * activeLegTerminalLength;
