@@ -118,7 +118,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
 
         m_currFlightPeriod = 0.0f;
         m_currStancePeriod = 0.0f;
-        m_nextStancePeriodEst = 1.0f; //TODO: What's a reasonable init value for this?
+        m_nextStancePeriodEst = 0.2f; //TODO: What's a reasonable init value for this?
 
         m_lastHopAmpRecorded = false;
         m_lastHopAmp = 0.0f;
@@ -139,6 +139,10 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
 
         m_targetThrustSpringLength = new float[NUM_LEGS];
         m_targetHopSpringLength = new float[NUM_LEGS];
+
+        //Reasonable init vals
+        for (int i = 0; i < NUM_LEGS; i++)
+            m_targetThrustSpringLength[i] = UPPER_LEG_DEFAULT_LENGTH;
 
         //Arbitrary... really... just out of the way of any world objects
         setInitState(new Vec2(-2.0f, 6.0f), new Vec2(0.0f, 0.0f));
@@ -271,21 +275,6 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
                     m_thrustJoint[i] = (PrismaticJoint) world.createJoint(jd);
                     m_initThrustJointLength[i] = m_thrustJoint[i].getBodyB().getPosition().sub(m_thrustJoint[i].getBodyA().getPosition()).length();
                 }
-
-//                {
-//                    DistanceJointDef jd = new DistanceJointDef();
-//                    jd.bodyA = m_hip[i];
-//                    jd.bodyB = m_knee[i];
-//                    jd.localAnchorA.set(0,0);
-//                    jd.localAnchorB.set(0,0);
-//                    Vec2 p1 = jd.bodyA.getWorldPoint(jd.localAnchorA);
-//                    Vec2 p2 = jd.bodyB.getWorldPoint(jd.localAnchorB);
-//                    Vec2 d = p2.sub(p1);
-//                    jd.length = d.length();
-//                    jd.frequencyHz = THRUST_SPRING_FREQUENCY;
-//                    jd.dampingRatio = THRUST_SPRING_DAMPING_RATIO;
-//                    m_thrustSpring[i] = (DistanceJoint) world.createJoint(jd);
-//                }
             }
 
             //Lower leg spring
@@ -305,22 +294,6 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
                     m_initSpringJointLength[i] = m_springJoint[i].getBodyB().getPosition().sub(m_springJoint[i].getBodyA().getPosition()).length();
                     m_targetHopSpringLength[i] = m_initSpringJointLength[i];
                 }
-
-//                //Add the "springiness"
-//                {
-//                    DistanceJointDef jd = new DistanceJointDef();
-//                    jd.bodyA = m_knee[i];
-//                    jd.bodyB = m_foot[i];
-//                    jd.localAnchorA.set(0,0);
-//                    jd.localAnchorB.set(0,0);
-//                    Vec2 p1 = jd.bodyA.getWorldPoint(jd.localAnchorA);
-//                    Vec2 p2 = jd.bodyB.getWorldPoint(jd.localAnchorB);
-//                    Vec2 d = p2.sub(p1);
-//                    jd.length = d.length();
-//                    jd.frequencyHz = HOP_SPRING_FREQUENCY;
-//                    jd.dampingRatio = HOP_SPRING_DAMPING_RATIO;
-//                    m_hopSpring[i] = (DistanceJoint) world.createJoint(jd);
-//                }
             }
         }
 
@@ -365,6 +338,8 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
                 //Switch to thrusting once at or past fully compressed spring
                 if (m_springVel > 0)                  {
                     m_controlState = ControlState.THRUST;
+
+                    //Add thrust back by pushing down on spring
                     float lengthAtThrustStart = m_targetThrustSpringLength[m_activeLegIdx];
                     m_targetThrustSpringLength[m_activeLegIdx] = lengthAtThrustStart + m_controlProvider.getCurrControl().activeThrustDelta;
                 }
@@ -403,11 +378,6 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
                 break;
             case THRUST:
                 servoBodyPitch();
-                //Add thrust back by pushing down on spring
-                //TODO: Correct thrust for desired hop height
-                //m_thrustSpring[m_activeLegIdx].setLength(UPPER_LEG_DEFAULT_LENGTH + 0.3f);
-//                float lengthAtThrustStart = m_targetThrustSpringLength[m_activeLegIdx];
-//                m_targetThrustSpringLength[m_activeLegIdx] = lengthAtThrustStart + m_controlProvider.getCurrControl().activeThrustDelta;
                 break;
             case UNLOAD:
                 //TODO
