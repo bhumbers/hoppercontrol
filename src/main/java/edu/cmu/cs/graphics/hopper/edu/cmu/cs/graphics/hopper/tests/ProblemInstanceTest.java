@@ -165,7 +165,7 @@ public class ProblemInstanceTest extends TestbedTest {
 
         List<Body> bodies = null;
         if (problem != null)
-            problem.getAvatar().getBodies();
+            bodies = problem.getAvatar().getBodies();
         else
             bodies = new ArrayList<Body>();
 
