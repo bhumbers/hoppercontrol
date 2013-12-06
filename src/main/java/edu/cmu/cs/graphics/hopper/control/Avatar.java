@@ -1,6 +1,7 @@
 package edu.cmu.cs.graphics.hopper.control;
 
 import org.jbox2d.callbacks.DebugDraw;
+import org.jbox2d.common.Color3f;
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.Body;
 import org.jbox2d.dynamics.World;
@@ -41,8 +42,8 @@ public abstract class Avatar<C extends Control> {
     public void onBeginContact(Contact contact) {}
     public void onEndContact(Contact contact) {}
 
-    /** Appends any useful lines of debug text about this avatar (for GUIs, generally) to given list */
-    public void appendDebugTextLines(List<String> lines) {}
+    /** Appends any useful lines of debug text (w/ associated colors) about this avatar (for GUIs, generally) to given lists */
+    public void appendDebugTextLines(List<String> lines, List<Color3f> colors) {}
 
     /** Draws an desired debug visuals for this avatar (for GUIS, generally) using given debug draw object */
     public void drawDebugInfo(DebugDraw dd) {}

@@ -57,6 +57,7 @@ public class ProblemInstance implements
     protected World world;
     protected Avatar avatar;
     protected Evaluator eval;
+    protected Body groundBody;
 
     //Simulation stepping stuff
     public int updateHz;             //determines simulation update timestep (1/updateHz)
@@ -66,6 +67,8 @@ public class ProblemInstance implements
     public boolean warmStarting;
     public boolean substepping;
     public boolean continuousCollision;
+
+    protected List<Contact> currContacts;
 
     //Serializers for state sampling
     boolean useSampling;
@@ -87,8 +90,9 @@ public class ProblemInstance implements
         this.evalDef = evalDef;
         this.givenCtrlProvider = ctrlProvider;
 
-        worldSamples = new ArrayList<WorldSample>();
+        currContacts = new ArrayList<Contact>();
 
+        worldSamples = new ArrayList<WorldSample>();
         //By default, don't use sampling (only necessary for debugging in most cases)
         setUseSampling(false);
     }
@@ -103,7 +107,9 @@ public class ProblemInstance implements
     public float getSimTime() {return simTime;}
     public World getWorld() {return world;}
     public Avatar getAvatar() {return avatar;}
+    public Evaluator getEvaluator() {return eval;}
     public Evaluator.Status getStatus() {return eval.getStatus();}
+    public Body getGroundBody() {return groundBody;}
     public ControlProvider getCtrlProvider() {
         if (avatar != null)
             return avatar.getControlProvider();
@@ -112,6 +118,8 @@ public class ProblemInstance implements
     public int getNumWorldSamples() {
         return worldSamples.size();
     }
+    /** Returns list of contact points generated at last sim update */
+    public List<Contact> getCurrentContacts() {return currContacts;}
 
     public void init() {
         simTime = 0;
@@ -156,7 +164,7 @@ public class ProblemInstance implements
         //Create basic flat ground (TODO: Move this to ProblemDefinition defs instead?)
         {
             BodyDef bd = new BodyDef();
-            Body ground = getWorld().createBody(bd);
+            groundBody = getWorld().createBody(bd);
 
             float groundLength = 200.0f;
 
@@ -167,13 +175,13 @@ public class ProblemInstance implements
             groundFd.density = 0.0f;
             groundFd.friction = 100.0f;
             groundFd.shape = shape;
-            ground.createFixture(groundFd);
+            groundBody.createFixture(groundFd);
 
             shape.set(new Vec2(-groundLength/2, 0.0f), new Vec2(-groundLength/2, 10.0f));
-            ground.createFixture(shape, 0.0f);
+            groundBody.createFixture(shape, 0.0f);
 
             shape.set(new Vec2(groundLength/2, 0.0f), new Vec2(groundLength/2, 10.0f));
-            ground.createFixture(shape, 0.0f);
+            groundBody.createFixture(shape, 0.0f);
         }
 
         world.setContactListener(this);
@@ -190,6 +198,8 @@ public class ProblemInstance implements
     }
 
     public void update(float dt, int velIters, int posIters) {
+        currContacts.clear();
+
         avatar.update(dt);
         world.step(dt, velIters, posIters);
         simTime += dt;
@@ -222,6 +232,7 @@ public class ProblemInstance implements
 
     @Override
     public void beginContact(Contact contact) {
+        currContacts.add(contact);
         if (avatar != null) avatar.onBeginContact(contact);
     }
 

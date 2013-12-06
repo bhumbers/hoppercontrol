@@ -9,8 +9,10 @@ import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
 import edu.cmu.cs.graphics.hopper.eval.Evaluator;
 import edu.cmu.cs.graphics.hopper.problems.ProblemInstance;
+import org.jbox2d.callbacks.ContactImpulse;
 import org.jbox2d.callbacks.DebugDraw;
 import org.jbox2d.callbacks.DestructionListener;
+import org.jbox2d.collision.Manifold;
 import org.jbox2d.collision.shapes.EdgeShape;
 import org.jbox2d.common.Color3f;
 import org.jbox2d.common.Transform;
@@ -365,18 +367,17 @@ public class ProblemInstanceTest extends TestbedTest {
                 setCamera(problem.getAvatar().getMainBody().getPosition());
             }
 
-            List<String> debugTextLines = new ArrayList<String>();
-            problem.getAvatar().appendDebugTextLines(debugTextLines);
-
             addTextLine("Runtime: " + numFormat.format(problem.getSimTime()));
-            for (String debugTextLine : debugTextLines)
-                addTextLine(debugTextLine);
 
-            DebugDraw dd = getModel().getDebugDraw();
-            if (problem.getAvatar() != null) {
-                Avatar avatar = problem.getAvatar();
-                avatar.drawDebugInfo(dd);
-            }
+            List<String> debugTextLines = new ArrayList<String>();
+            List<Color3f> debugTextColors = new ArrayList<Color3f>();
+            problem.getAvatar().appendDebugTextLines(debugTextLines, debugTextColors);
+            addTextLines(debugTextLines, debugTextColors);
+            addTextLine("");
+            debugTextLines.clear(); debugTextColors.clear();
+            problem.getEvaluator().appendDebugTextLines(debugTextLines, debugTextColors);
+            addTextLines(debugTextLines, debugTextColors);
+            addTextLine("");
 
             Evaluator.Status evalStatus = problem.getStatus();
             Color3f evalColor = new Color3f();
@@ -388,6 +389,12 @@ public class ProblemInstanceTest extends TestbedTest {
             addTextLine("Evaluation status: " + evalStatus.toString(), evalColor);
 
             addTextLine("Sample replay: " + worldSampleIdx + "/" + problem.getNumWorldSamples());
+
+            DebugDraw dd = getModel().getDebugDraw();
+            if (problem.getAvatar() != null) {
+                Avatar avatar = problem.getAvatar();
+                avatar.drawDebugInfo(dd);
+            }
         }
         //Otherwise, indicate our waiting status
         else {
@@ -396,25 +403,50 @@ public class ProblemInstanceTest extends TestbedTest {
         }
     }
 
+    protected void addTextLines(List<String> argTextLines, List<Color3f> argColors) {
+        for (int i = 0; i < argTextLines.size(); i++)
+            addTextLine(argTextLines.get(i), argColors.get(i));
+    }
+
     @Override
     public String getTestName() {
         return "User Oracle";
     }
 
     @Override
+    public void preSolve(Contact contact, Manifold oldManifold) {
+        super.preSolve(contact, oldManifold);
+
+        //Delegate to problem
+        if (problem != null)
+            problem.preSolve(contact, oldManifold);
+    }
+
+    @Override
+    public void postSolve(Contact contact, ContactImpulse impulse) {
+        super.postSolve(contact, impulse);
+
+        //Delegate to problem
+        if (problem != null)
+            problem.postSolve(contact, impulse);
+    }
+
+    @Override
     public void beginContact(Contact contact) {
         super.beginContact(contact);
 
-        if (problem != null && problem.getAvatar() != null)
-            problem.getAvatar().onBeginContact(contact);
+        //Delegate to problem
+        if (problem != null)
+            problem.beginContact(contact);
     }
 
     @Override
     public void endContact(Contact contact) {
         super.endContact(contact);
 
-        if (problem != null && problem.getAvatar() != null)
-            problem.getAvatar().onEndContact(contact);
+        //Delegate to problem
+        if (problem != null)
+            problem.endContact(contact);
     }
 
     protected BipedHopperControl getNextControl() {

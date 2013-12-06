@@ -172,11 +172,11 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
 
     public ControlState getControlState() {return m_controlState;}
 
-    public boolean isFootInGroundContact() {return m_footInContact;}
-    protected void setFootInGroundContact(boolean val) {m_footInContact = val;}
+    public boolean isFootInContact() {return m_footInContact;}
+    protected void setFootInContact(boolean val) {m_footInContact = val;}
 
-    public boolean isChassisInGroundContact() {return m_chassisInContact;}
-    protected void setChassisInGroundContact(boolean val) {m_chassisInContact = val;}
+    public boolean isChassisInContact() {return m_chassisInContact;}
+    protected void setChassisInContact(boolean val) {m_chassisInContact = val;}
 
     @Override
     public void setInitState(Vec2 initPos, Vec2 initVel) {
@@ -414,10 +414,10 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
         Body bodyB = contact.getFixtureB().getBody();
 
         if (bodyA == groundContactBody || bodyB == groundContactBody)
-            setFootInGroundContact(true);
+            setFootInContact(true);
 
         if (bodyA == m_chassis || bodyB == m_chassis)
-            setChassisInGroundContact(true);
+            setChassisInContact(true);
     }
 
     @Override
@@ -429,10 +429,10 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
         Body bodyB = contact.getFixtureB().getBody();
 
         if (bodyA == groundContactBody || bodyB == groundContactBody)
-            setFootInGroundContact(false);
+            setFootInContact(false);
 
         if (bodyA == m_chassis || bodyB == m_chassis)
-            setChassisInGroundContact(false);
+            setChassisInContact(false);
     }
 
     protected void swapActiveLeg() {
@@ -556,19 +556,20 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
     }
 
     @Override
-    public void appendDebugTextLines(List<String> lines) {
-        super.appendDebugTextLines(lines);
+    public void appendDebugTextLines(List<String> lines, List<Color3f> colors) {
+        super.appendDebugTextLines(lines, colors);
 
-        lines.add("Control State: " + getControlState());
-        lines.add("Active Leg Spring Compression: " + numFormat.format(getActiveSpringJoint().getJointTranslation()));
-        lines.add("Body Vel X: " + numFormat.format(getMainBody().getLinearVelocity().x));
-        lines.add("Target Body Vel X: " + numFormat.format(getCurrentControl().targetBodyVelX));
-        lines.add("Vel X Leg Gain: " + numFormat.format(getCurrentControl().targetBodyVelXLegPlacementGain));
-        lines.add("Thrust offset: " + numFormat.format(getCurrentControl().activeThrustDelta));
-        lines.add("Last Hop Amp: " + numFormat.format(m_lastHopAmp));
-        lines.add("Flight period: " + numFormat.format(m_currFlightPeriod));
-        lines.add("Stance period: " + numFormat.format(m_currStancePeriod));
-        lines.add("Target Spring Length: " + numFormat.format(m_targetThrustSpringLength[m_activeLegIdx]));
+        lines.add("Control State: " + getControlState());                                                               colors.add(Color3f.WHITE);
+        lines.add("Active Leg Spring Compression: " + numFormat.format(getActiveSpringJoint().getJointTranslation()));  colors.add(Color3f.WHITE);
+        lines.add("Body Ang Vel: " + numFormat.format(getMainBody().getAngularVelocity()));                             colors.add(Color3f.WHITE);
+        lines.add("Body Vel X: " + numFormat.format(getMainBody().getLinearVelocity().x));                              colors.add(Color3f.WHITE);
+        lines.add("Target Body Vel X: " + numFormat.format(getCurrentControl().targetBodyVelX));                        colors.add(Color3f.WHITE);
+        lines.add("Vel X Leg Gain: " + numFormat.format(getCurrentControl().targetBodyVelXLegPlacementGain));           colors.add(Color3f.WHITE);
+        lines.add("Thrust offset: " + numFormat.format(getCurrentControl().activeThrustDelta));                         colors.add(Color3f.WHITE);
+        lines.add("Last Hop Amp: " + numFormat.format(m_lastHopAmp));                                                   colors.add(Color3f.WHITE);
+        lines.add("Flight period: " + numFormat.format(m_currFlightPeriod));                                            colors.add(Color3f.WHITE);
+        lines.add("Stance period: " + numFormat.format(m_currStancePeriod));                                            colors.add(Color3f.WHITE);
+        lines.add("Target Spring Length: " + numFormat.format(m_targetThrustSpringLength[m_activeLegIdx]));             colors.add(Color3f.WHITE);
     }
 
     @Override

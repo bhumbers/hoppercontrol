@@ -39,7 +39,7 @@ public class HopperTestbedMain {
         ControlProvider ctrlProvider = new ControlProvider<BipedHopperControl>(new BipedHopperControl());
         ProblemInstance problem = new ProblemInstance((new ObstacleProblemDefinition(1.0f, 1.0f)),
                                                         new BipedHopperDefinition(),
-                                                        new BipedObstacleEvaluatorDefinition(),
+                                                        new BipedObstacleEvaluatorDefinition(20.0f, 20.0f, 1.0f, 2.0f),
                                                         ctrlProvider);
         problem.init();
         piTest.setProblem(problem);

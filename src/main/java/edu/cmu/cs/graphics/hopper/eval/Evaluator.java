@@ -4,8 +4,11 @@ import edu.cmu.cs.graphics.hopper.control.Avatar;
 import edu.cmu.cs.graphics.hopper.control.ControlPrim;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemInstance;
+import org.jbox2d.common.Color3f;
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.World;
+
+import java.util.List;
 
 /** Evaluates the effectiveness of a control strategy for an avatar during simulation on a particular problem instance */
  public abstract class Evaluator {
@@ -31,4 +34,7 @@ import org.jbox2d.dynamics.World;
 
     /** Runs any final evaluation of controller fitness (this is called at the end of simulation run) */
     public abstract void finishEvaluation(ProblemInstance problem);
+
+    /** Appends any useful lines of debug text about this avatar (for GUIs, generally) to given list */
+    public void appendDebugTextLines(List<String> lines, List<Color3f> colors) {}
 }
