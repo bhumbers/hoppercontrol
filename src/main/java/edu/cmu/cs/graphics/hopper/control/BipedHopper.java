@@ -62,7 +62,9 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
     private final float FOOT_RADIUS = 0.2f;
     private final float FOOT_DENSITY = CHASSIS_DENSITY * 5;
 
-    public boolean m_inContact;
+    protected boolean m_footInContact;
+    protected boolean m_chassisInContact;
+
     public float m_springVel;
     public ControlState m_controlState;
     public Vec2 m_bodyVel;
@@ -109,7 +111,8 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
     public int m_idleLegIdx;
 
     public BipedHopper() {
-        m_inContact = false;
+        m_footInContact = false;
+        m_chassisInContact = false;
         m_springVel = 0;
         m_controlState = ControlState.FLIGHT;
         m_bodyVel = new Vec2();
@@ -169,8 +172,11 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
 
     public ControlState getControlState() {return m_controlState;}
 
-    public void setInContact(boolean val) {m_inContact = val;}
-    public boolean getInContact() {return m_inContact;}
+    public boolean isFootInGroundContact() {return m_footInContact;}
+    protected void setFootInGroundContact(boolean val) {m_footInContact = val;}
+
+    public boolean isChassisInGroundContact() {return m_chassisInContact;}
+    protected void setChassisInGroundContact(boolean val) {m_chassisInContact = val;}
 
     @Override
     public void setInitState(Vec2 initPos, Vec2 initVel) {
@@ -329,7 +335,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
         switch (m_controlState) {
             case FLIGHT:
                 //Switch to load or compress state once we make contact with ground
-                if (m_inContact)        {
+                if (m_footInContact)        {
                     m_controlState = ControlState.COMPRESS; //TODO: include "LOAD" phase as well?
                     m_currStancePeriod = 0.0f;
                 }
@@ -346,7 +352,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
                 break;
             case THRUST:
                 //Switch to flight once we leave the ground
-                if (m_inContact == false) {
+                if (m_footInContact == false) {
                     m_controlState = ControlState.FLIGHT;
                     m_nextStancePeriodEst = m_currStancePeriod; //estimate next support from current
                     swapActiveLeg();
@@ -384,7 +390,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
                 break;
         }
 
-        if (m_inContact)
+        if (m_footInContact)
             m_currStancePeriod += dt;
         else
             m_currFlightPeriod += dt;
@@ -404,20 +410,29 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
     public void onBeginContact(Contact contact) {
         //Start "in contact with ground" status if applicable
         Body groundContactBody = getGroundContactBody();
-        if (contact.getFixtureA().getBody() == groundContactBody ||
-                contact.getFixtureB().getBody() == groundContactBody) {
-            setInContact(true);
-        }
+        Body bodyA = contact.getFixtureA().getBody();
+        Body bodyB = contact.getFixtureB().getBody();
+
+        if (bodyA == groundContactBody || bodyB == groundContactBody)
+            setFootInGroundContact(true);
+
+        if (bodyA == m_chassis || bodyB == m_chassis)
+            setChassisInGroundContact(true);
     }
 
     @Override
     public void onEndContact(Contact contact) {
         //End "in contact with ground" status if applicable
+
         Body groundContactBody = getGroundContactBody();
-        if (contact.getFixtureA().getBody() == groundContactBody ||
-                contact.getFixtureB().getBody() == groundContactBody) {
-            setInContact(false);
-        }
+        Body bodyA = contact.getFixtureA().getBody();
+        Body bodyB = contact.getFixtureB().getBody();
+
+        if (bodyA == groundContactBody || bodyB == groundContactBody)
+            setFootInGroundContact(false);
+
+        if (bodyA == m_chassis || bodyB == m_chassis)
+            setChassisInGroundContact(false);
     }
 
     protected void swapActiveLeg() {

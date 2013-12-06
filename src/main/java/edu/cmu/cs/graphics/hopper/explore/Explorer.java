@@ -3,6 +3,8 @@ package edu.cmu.cs.graphics.hopper.explore;
 import edu.cmu.cs.graphics.hopper.control.AvatarDefinition;
 import edu.cmu.cs.graphics.hopper.control.Control;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
+import edu.cmu.cs.graphics.hopper.eval.Evaluator;
+import edu.cmu.cs.graphics.hopper.eval.EvaluatorDefinition;
 import edu.cmu.cs.graphics.hopper.oracle.ChallengeOracle;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemInstance;
@@ -52,11 +54,11 @@ public abstract class Explorer<C extends Control> {
     Set<ProblemDefinition> oracleChallengeProblems;
 
     /** Runs exploration in a continuous loop until all problems are solved */
-    public void explore(List<ProblemDefinition> problems, AvatarDefinition avatarDef, ChallengeOracle<C> oracle) {explore(problems, avatarDef, oracle, -1);}
+    public void explore(List<ProblemDefinition> problems, AvatarDefinition avatarDef, EvaluatorDefinition evalDef, ChallengeOracle<C> oracle) {explore(problems, avatarDef, evalDef, oracle, -1);}
 
     /** Runs exploration in a continuous loop until max control tests is reached or all problems are solved
      * Runs until completion if maxTests == -1 (or anything < 0). */
-    public void explore(List<ProblemDefinition> problems, AvatarDefinition avatarDef, ChallengeOracle<C> oracle, int maxTests) {
+    public void explore(List<ProblemDefinition> problems, AvatarDefinition avatarDef, EvaluatorDefinition evalDef, ChallengeOracle<C> oracle, int maxTests) {
         numTests = 0;
         numOracleChallenges = 0;
         this.oracle = oracle;
@@ -82,11 +84,11 @@ public abstract class Explorer<C extends Control> {
             boolean problemSolved = false;
             ControlProvider<C> potentialSolution = getNextControlSequence(problemDef);
             while (potentialSolution != null) {
-                ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, potentialSolution);
+                ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, evalDef, potentialSolution);
                 problem.init();
                 problem.run();
                 numTests++;
-                problemSolved = (problem.getStatus() == ProblemInstance.ProblemStatus.SOLVED);
+                problemSolved = (problem.getStatus() == Evaluator.Status.SUCCESS);
                 if (problemSolved)
                     break;
                 else
@@ -110,18 +112,18 @@ public abstract class Explorer<C extends Control> {
             if (challenge != null) {
                 log.info("Sending challenge #" + numOracleChallenges + " to oracle: " + problemDef.toString());
                 numOracleChallenges++;
-                ControlProvider<C> challengeSolution = oracle.solveChallenge(challenge, avatarDef);
+                ControlProvider<C> challengeSolution = oracle.solveChallenge(challenge, avatarDef, evalDef);
 
                 boolean oracleSolutionOk = true;
 
                 //DEBUGGING: Verify that oracle solution is correct.
                 if (ENABLE_ORACLE_SOLUTION_VERIFICATION_REVIEW) {
                     challengeSolution.goToFirstControl();
-                    ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, challengeSolution);
+                    ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, evalDef, challengeSolution);
                     problem.setUseSampling(true); //for debugging
                     problem.init();
                     problem.run();
-                    if (problem.getStatus() != ProblemInstance.ProblemStatus.SOLVED) {
+                    if (problem.getStatus() != Evaluator.Status.SUCCESS) {
                         log.warn("Oracle returned an incorrect challenge solution. That shouldn't happen. ProblemDefinition hash: " + challenge.hashCode());
                         oracleSolutionOk = false;
                         oracle.sendForReview(problem);

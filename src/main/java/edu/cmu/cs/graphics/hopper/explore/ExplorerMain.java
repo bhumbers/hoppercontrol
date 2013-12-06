@@ -3,6 +3,8 @@ package edu.cmu.cs.graphics.hopper.explore;
 import edu.cmu.cs.graphics.hopper.control.AvatarDefinition;
 import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
 import edu.cmu.cs.graphics.hopper.control.BipedHopperDefinition;
+import edu.cmu.cs.graphics.hopper.eval.BipedObstacleEvaluatorDefinition;
+import edu.cmu.cs.graphics.hopper.eval.EvaluatorDefinition;
 import edu.cmu.cs.graphics.hopper.oracle.ChallengeOracle;
 import edu.cmu.cs.graphics.hopper.oracle.UserOracle;
 import edu.cmu.cs.graphics.hopper.problems.ObstacleProblemDefinition;
@@ -68,8 +70,11 @@ public class ExplorerMain {
         //Test oracle
         ChallengeOracle<BipedHopperControl> oracle = new UserOracle<BipedHopperControl>();
 
+        //Test evaluation
+        EvaluatorDefinition evalDef = new BipedObstacleEvaluatorDefinition(20.0f, 20.0f);
+
         Explorer explorer = new SimpleExplorer();
-        explorer.explore(problems, avatarDef, oracle);
+        explorer.explore(problems, avatarDef, evalDef, oracle);
 
         log.info("Control exploration COMPLETE");
         log.info("Problems solved:          " + explorer.getNumSolvedProblems() + "/" + explorer.getNumProblems());

@@ -319,29 +319,29 @@ public class BipedHopperTest extends TestbedTest {
     @Override
     public void beginContact(Contact contact) {
         super.beginContact(contact);
-
-        //Check if this contact involves the hopper and mark the start of contact if so
-        if (m_hopper != null) {
-            Body hopperContactBody = m_hopper.getGroundContactBody();
-            if (contact.getFixtureA().getBody() == hopperContactBody ||
-                    contact.getFixtureB().getBody() == hopperContactBody) {
-               m_hopper.setInContact(true);
-            }
-        }
+//
+//        //Check if this contact involves the hopper and mark the start of contact if so
+//        if (m_hopper != null) {
+//            Body hopperContactBody = m_hopper.getGroundContactBody();
+//            if (contact.getFixtureA().getBody() == hopperContactBody ||
+//                    contact.getFixtureB().getBody() == hopperContactBody) {
+//               m_hopper.setInContact(true);
+//            }
+//        }
     }
 
     @Override
     public void endContact(Contact contact) {
         super.endContact(contact);
-
-        //Check if this contact involves the hopper and mark the end of contact if so
-        if (m_hopper != null) {
-            Body hopperContactBody = m_hopper.getGroundContactBody();
-            if (contact.getFixtureA().getBody() == hopperContactBody ||
-                    contact.getFixtureB().getBody() == hopperContactBody) {
-                m_hopper.setInContact(false);
-            }
-        }
+//
+//        //Check if this contact involves the hopper and mark the end of contact if so
+//        if (m_hopper != null) {
+//            Body hopperContactBody = m_hopper.getGroundContactBody();
+//            if (contact.getFixtureA().getBody() == hopperContactBody ||
+//                    contact.getFixtureB().getBody() == hopperContactBody) {
+//                m_hopper.setInContact(false);
+//            }
+//        }
     }
 
     protected void drawHopperDebug() {

@@ -6,6 +6,7 @@ import edu.cmu.cs.graphics.hopper.control.ControlProvider;
 import edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests.BipedHopperTest;
 import edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests.ProblemInstanceTest;
 import edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests.WormTest;
+import edu.cmu.cs.graphics.hopper.eval.BipedObstacleEvaluatorDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ObstacleProblemDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemInstance;
 import org.jbox2d.testbed.framework.*;
@@ -36,7 +37,10 @@ public class HopperTestbedMain {
 
         ProblemInstanceTest piTest = new ProblemInstanceTest();
         ControlProvider ctrlProvider = new ControlProvider<BipedHopperControl>(new BipedHopperControl());
-        ProblemInstance problem = new ProblemInstance((new ObstacleProblemDefinition(1.0f, 1.0f)), new BipedHopperDefinition(), ctrlProvider);
+        ProblemInstance problem = new ProblemInstance((new ObstacleProblemDefinition(1.0f, 1.0f)),
+                                                        new BipedHopperDefinition(),
+                                                        new BipedObstacleEvaluatorDefinition(),
+                                                        ctrlProvider);
         problem.init();
         piTest.setProblem(problem);
         model.addTest(piTest);

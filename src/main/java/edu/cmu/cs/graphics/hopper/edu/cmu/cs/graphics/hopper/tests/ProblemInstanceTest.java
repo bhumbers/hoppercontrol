@@ -7,6 +7,7 @@ import edu.cmu.cs.graphics.hopper.control.Avatar;
 import edu.cmu.cs.graphics.hopper.control.BipedHopper;
 import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
+import edu.cmu.cs.graphics.hopper.eval.Evaluator;
 import edu.cmu.cs.graphics.hopper.problems.ProblemInstance;
 import org.jbox2d.callbacks.DebugDraw;
 import org.jbox2d.callbacks.DestructionListener;
@@ -124,6 +125,13 @@ public class ProblemInstanceTest extends TestbedTest {
         }
         else {
             m_world = null;
+        }
+
+        //Generate a dummy "grounding" body to be used for mouse joints
+        // (note that this is different from the physical ground plane)
+        if (m_world != null) {
+            BodyDef bodyDef = new BodyDef();
+            groundBody = m_world.createBody(bodyDef);
         }
 
         init(m_world, false);
@@ -308,7 +316,7 @@ public class ProblemInstanceTest extends TestbedTest {
     }
 
     @Override
-    public void step(TestbedSettings settings) {
+    public synchronized void step(TestbedSettings settings) {
 //        super.step(settings); //DISABLED... we're going to straight up replace this call...
 
         float hz = settings.getSetting(TestbedSettings.Hz).value;
@@ -370,7 +378,15 @@ public class ProblemInstanceTest extends TestbedTest {
                 avatar.drawDebugInfo(dd);
             }
 
-            addTextLine("Problem status: " + problem.getStatus().toString());
+            Evaluator.Status evalStatus = problem.getStatus();
+            Color3f evalColor = new Color3f();
+            switch (evalStatus) {
+                case SUCCESS: evalColor.set(0,1,0); break;
+                case FAILURE: evalColor.set(1,0.5f,0.5f); break;
+                case RUNNING: evalColor.set(1,1,1); break;
+            }
+            addTextLine("Evaluation status: " + evalStatus.toString(), evalColor);
+
             addTextLine("Sample replay: " + worldSampleIdx + "/" + problem.getNumWorldSamples());
         }
         //Otherwise, indicate our waiting status

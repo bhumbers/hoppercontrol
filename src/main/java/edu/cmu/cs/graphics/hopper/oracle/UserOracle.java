@@ -5,6 +5,8 @@ import edu.cmu.cs.graphics.hopper.control.AvatarDefinition;
 import edu.cmu.cs.graphics.hopper.control.Control;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
 import edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests.ProblemInstanceTest;
+import edu.cmu.cs.graphics.hopper.eval.Evaluator;
+import edu.cmu.cs.graphics.hopper.eval.EvaluatorDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemInstance;
 import org.jbox2d.testbed.framework.TestbedController;
@@ -65,17 +67,17 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
     }
 
     @Override
-    public ControlProvider<C> solveChallenge(ProblemDefinition problemDef, AvatarDefinition avatarDef) {
+    public ControlProvider<C> solveChallenge(ProblemDefinition problemDef, AvatarDefinition avatarDef, EvaluatorDefinition evalDef) {
         //TODO: Send problem to GUI, wait for user to complete, return provided control
 
-        ProblemInstance problem = new ProblemInstance(problemDef, avatarDef);
+        ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, evalDef);
         problem.setUseSampling(true); //for debugging
         problem.init();
 
         test.setProblem(problem);
         test.reset();
 
-        while (problem.getStatus() != ProblemInstance.ProblemStatus.SOLVED) {
+        while (problem.getStatus() != Evaluator.Status.SUCCESS) {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
@@ -83,6 +85,7 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
                 e.printStackTrace();
             }
         }
+        problem.finish();
 
         //Clear the problem once completed
         test.setProblem(null);

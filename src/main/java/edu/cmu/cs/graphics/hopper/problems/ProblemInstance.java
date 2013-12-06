@@ -4,6 +4,8 @@ import edu.cmu.cs.graphics.hopper.control.Avatar;
 import edu.cmu.cs.graphics.hopper.control.AvatarDefinition;
 import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
+import edu.cmu.cs.graphics.hopper.eval.Evaluator;
+import edu.cmu.cs.graphics.hopper.eval.EvaluatorDefinition;
 import org.box2d.proto.Box2D;
 import org.jbox2d.callbacks.ContactImpulse;
 import org.jbox2d.callbacks.ContactListener;
@@ -41,25 +43,20 @@ public class ProblemInstance implements
         }
     }
 
-    public enum ProblemStatus {
-        RUNNING,
-        SOLVED,
-        FAILURE
-    }
-
     protected static final Logger log = LoggerFactory.getLogger(ProblemInstance.class);
 
-    ProblemStatus status;
     protected int stepCount;
     float simTime;
 
     //Static definition stuff
     final AvatarDefinition avatarDef;
     final ProblemDefinition problemDef;
+    final EvaluatorDefinition evalDef;
 
     //Dynamic runtime stuff
     protected World world;
     protected Avatar avatar;
+    protected Evaluator eval;
 
     //Simulation stepping stuff
     public int updateHz;             //determines simulation update timestep (1/updateHz)
@@ -79,14 +76,15 @@ public class ProblemInstance implements
     protected ControlProvider givenCtrlProvider;
 
     /** Creates a new problem instance where avatar will use default control provider */
-    public ProblemInstance(ProblemDefinition problemDef, AvatarDefinition avatarDef) {
-        this(problemDef, avatarDef, null);
+    public ProblemInstance(ProblemDefinition problemDef, AvatarDefinition avatarDef, EvaluatorDefinition evalDef) {
+        this(problemDef, avatarDef, evalDef, null);
     }
 
     /** Creates a new problem instance where avatar will use given control provider */
-    public ProblemInstance(ProblemDefinition problemDef, AvatarDefinition avatarDef, ControlProvider ctrlProvider) {
+    public ProblemInstance(ProblemDefinition problemDef, AvatarDefinition avatarDef, EvaluatorDefinition evalDef, ControlProvider ctrlProvider) {
         this.problemDef = problemDef;
         this.avatarDef = avatarDef;
+        this.evalDef = evalDef;
         this.givenCtrlProvider = ctrlProvider;
 
         worldSamples = new ArrayList<WorldSample>();
@@ -105,7 +103,7 @@ public class ProblemInstance implements
     public float getSimTime() {return simTime;}
     public World getWorld() {return world;}
     public Avatar getAvatar() {return avatar;}
-    public ProblemStatus getStatus() {return status;}
+    public Evaluator.Status getStatus() {return eval.getStatus();}
     public ControlProvider getCtrlProvider() {
         if (avatar != null)
             return avatar.getControlProvider();
@@ -116,7 +114,6 @@ public class ProblemInstance implements
     }
 
     public void init() {
-        status = ProblemStatus.RUNNING;
         simTime = 0;
         stepCount = 0;
 
@@ -136,6 +133,9 @@ public class ProblemInstance implements
         Vec2 gravity = new Vec2(0, -10f);
         world = new World(gravity);
 
+        eval = evalDef.create();
+        eval.init();
+
         if (avatarDef != null) {
             avatar = avatarDef.create();
 
@@ -150,6 +150,7 @@ public class ProblemInstance implements
 
             avatar.init(world);
         }
+
         problemDef.init(world);
 
         //Create basic flat ground (TODO: Move this to ProblemDefinition defs instead?)
@@ -157,8 +158,10 @@ public class ProblemInstance implements
             BodyDef bd = new BodyDef();
             Body ground = getWorld().createBody(bd);
 
+            float groundLength = 200.0f;
+
             EdgeShape shape = new EdgeShape();
-            shape.set(new Vec2(-50.0f, 0.0f), new Vec2(50.0f, 0.0f));
+            shape.set(new Vec2(-groundLength/2, 0.0f), new Vec2(groundLength/2, 0.0f));
             FixtureDef groundFd = new FixtureDef();
 //            groundFd.restitution = 1.0f; //assume perfectly elastic bounces
             groundFd.density = 0.0f;
@@ -166,10 +169,10 @@ public class ProblemInstance implements
             groundFd.shape = shape;
             ground.createFixture(groundFd);
 
-            shape.set(new Vec2(-50.0f, 0.0f), new Vec2(-50.0f, 10.0f));
+            shape.set(new Vec2(-groundLength/2, 0.0f), new Vec2(-groundLength/2, 10.0f));
             ground.createFixture(shape, 0.0f);
 
-            shape.set(new Vec2(50.0f, 0.0f), new Vec2(50.0f, 10.0f));
+            shape.set(new Vec2(groundLength/2, 0.0f), new Vec2(groundLength/2, 10.0f));
             ground.createFixture(shape, 0.0f);
         }
 
@@ -180,9 +183,10 @@ public class ProblemInstance implements
         //Timestep through complete problem instance test
         simTime = 0.0f;
         float dt = 1.0f/updateHz;
-        while (status == ProblemStatus.RUNNING) {
+        while (getStatus() == Evaluator.Status.RUNNING) {
             update(dt, posIters, velIters);
         }
+        finish();
     }
 
     public void update(float dt, int velIters, int posIters) {
@@ -190,16 +194,7 @@ public class ProblemInstance implements
         world.step(dt, velIters, posIters);
         simTime += dt;
 
-        //TODO: Actually evaluate problem status. Solved? Failed?
-        //This is probably best delegated to the problem def (eg: problemDef.getStatus(World, Avatar) or some "evaluator" class,
-        //the latter allowing us to decouple a problem definition from how we evaluate if it's solved or not.
-        //TESTING: Solved if we cross some dist to the right, failed if we go left (arbirtrary) or run too long
-        if (simTime > 10.0f)
-            status = ProblemStatus.FAILURE;
-        else if (avatar.getMainBody().getPosition().x > 1.0f)
-            status = ProblemStatus.SOLVED;
-        else
-            status = ProblemStatus.RUNNING;
+        eval.updateEvaluation(this);
 
         //If sampling is enabled and enough time has passed, store a sample
         float samplingTimestep = 1.0f / 10.0f; //10 Hz
@@ -209,6 +204,12 @@ public class ProblemInstance implements
         {
             worldSamples.add(new WorldSample(simTime, serializer.serializeWorld(world).build()));
         }
+    }
+
+    /**Should be called when a simulation run is completed/exited in order
+     * to update some final evaluation fitnes results, etc. */
+    public void finish() {
+        eval.finishEvaluation(this);
     }
 
     /** Returns sim World at given sampled index in sample list (if available)
