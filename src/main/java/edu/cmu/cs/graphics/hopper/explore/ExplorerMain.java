@@ -71,7 +71,7 @@ public class ExplorerMain {
         ChallengeOracle<BipedHopperControl> oracle = new UserOracle<BipedHopperControl>();
 
         //Test evaluation
-        EvaluatorDefinition evalDef = new BipedObstacleEvaluatorDefinition(20.0f, 20.0f, 1.0f, 2.0f);
+        EvaluatorDefinition evalDef = new BipedObstacleEvaluatorDefinition(30.0f, 20.0f, 1.0f, 5.0f);
 
         Explorer explorer = new SimpleExplorer();
         explorer.explore(problems, avatarDef, evalDef, oracle);

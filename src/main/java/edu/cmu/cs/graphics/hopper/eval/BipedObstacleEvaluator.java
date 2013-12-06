@@ -100,18 +100,18 @@ public class BipedObstacleEvaluator extends Evaluator {
         }
 
         //Update status colors
-        if (timeInSuccessRegion >= 0)
+        if (timeInSuccessRegion > 0.0f)
             inSuccessRegionStatusColor.set(Color3f.GREEN);
         else
             inSuccessRegionStatusColor.set(Color3f.RED);
-        if (timeUpright > def.minConsecutiveUprightTimeAfterMinXReached)
+        if (timeUpright > 0.0f)
             timeUprightStatusColor.set(Color3f.GREEN);
         else
             timeUprightStatusColor.set(Color3f.RED);
-        if (timeUprightInSuccessRegion < 0.0f)
-            timeUprightInSuccessRegionStatusColor.set(Color3f.BLACK);
-        else
+        if (timeUprightInSuccessRegion > 0.0f)
             timeUprightInSuccessRegionStatusColor.set(Color3f.WHITE);
+        else
+            timeUprightInSuccessRegionStatusColor.set(Color3f.BLACK);
 
         //Update time upright while at or beyond minimum x threshold
         if (timeThatMinXReached > 0 && timeThatUprightReached > 0) {
@@ -120,9 +120,11 @@ public class BipedObstacleEvaluator extends Evaluator {
             else //upright before entering success region
                 timeUprightInSuccessRegion = timeInSuccessRegion;
         }
+        else
+            timeUprightInSuccessRegion = 0;
 
-        //TESTING: Solved if we cross some dist to the right, failed if we go left (arbitrary) or run too long
-        //TODO: Actually evaluate problem status. Solved? Failed?
+
+        //Update our success/failure status
         if (avatarFellOver || problem.getSimTime() > def.maxTime)
             status = Status.FAILURE;
         //If we've reached success threshold x, we may have succeeded...
@@ -149,7 +151,7 @@ public class BipedObstacleEvaluator extends Evaluator {
 
         lines.add("Time in success region:         " + numFormat.format(timeInSuccessRegion));
         colors.add(inSuccessRegionStatusColor);
-        lines.add("Upright time:                   " + numFormat.format(timeUpright));
+        lines.add("Upright time:                              " + numFormat.format(timeUpright));
         colors.add(timeUprightStatusColor);
         lines.add("Time upright in success region: " + numFormat.format(timeUprightInSuccessRegion));
         colors.add(timeUprightInSuccessRegionStatusColor);
