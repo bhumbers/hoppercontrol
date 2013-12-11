@@ -72,7 +72,6 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
 
         ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, evalDef);
         problem.setUseSampling(true); //for debugging
-        problem.init();
 
         test.setProblem(problem);
         test.reset();

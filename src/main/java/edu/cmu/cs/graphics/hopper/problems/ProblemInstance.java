@@ -19,6 +19,7 @@ import org.jbox2d.dynamics.World;
 import org.jbox2d.dynamics.contacts.Contact;
 import org.jbox2d.serialization.pb.PbDeserializer;
 import org.jbox2d.serialization.pb.PbSerializer;
+import org.jbox2d.testbed.framework.TestbedSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,7 +109,7 @@ public class ProblemInstance implements
     public World getWorld() {return world;}
     public Avatar getAvatar() {return avatar;}
     public Evaluator getEvaluator() {return eval;}
-    public Evaluator.Status getStatus() {return eval.getStatus();}
+    public Evaluator.Status getStatus() {return (eval != null) ? eval.getStatus() : Evaluator.Status.RUNNING;}
     public Body getGroundBody() {return groundBody;}
     public ControlProvider getCtrlProvider() {
         if (avatar != null)
@@ -141,6 +142,11 @@ public class ProblemInstance implements
         Vec2 gravity = new Vec2(0, -10f);
         world = new World(gravity);
 
+        world.setAllowSleep(allowSleep);
+        world.setWarmStarting(warmStarting);
+        world.setSubStepping(substepping);
+        world.setContinuousPhysics(continuousCollision);
+
         eval = evalDef.create();
         eval.init();
 
@@ -152,7 +158,7 @@ public class ProblemInstance implements
                 avatar.setControlProvider(givenCtrlProvider);
 
             //TODO: move this to problem or avatar def... just useful to hardcode for now
-            final float INIT_VEL_X = 1.0f;
+            final float INIT_VEL_X = 1.5f;
             avatar.setInitState(new Vec2(-10.0f, 8.0f), new Vec2(INIT_VEL_X, 0.0f));
             ((ControlProvider<BipedHopperControl>)avatar.getControlProvider()).getCurrControl().targetBodyVelX = INIT_VEL_X;
 
@@ -192,7 +198,7 @@ public class ProblemInstance implements
         simTime = 0.0f;
         float dt = 1.0f/updateHz;
         while (getStatus() == Evaluator.Status.RUNNING) {
-            update(dt, posIters, velIters);
+            update(dt, velIters, posIters);
         }
         finish();
     }

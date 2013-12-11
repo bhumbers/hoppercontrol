@@ -69,8 +69,13 @@ public class ProblemInstanceTest extends TestbedTest {
 
         worldSampleIdx = 0;
 
-        //Update this tests' simulation update params to match the problem
-        if (problem != null) {
+        //Update the model's params to match the problem, if able
+        //(we may not have a model set yet)
+        setModelSettingsForProblem(problem);
+    }
+
+    private void setModelSettingsForProblem(ProblemInstance problem) {
+        if (model != null && problem != null) {
             model.getSettings().getSetting(TestbedSettings.Hz).value = problem.updateHz;
             model.getSettings().getSetting(TestbedSettings.PositionIterations).value = problem.posIters;
             model.getSettings().getSetting(TestbedSettings.VelocityIterations).value = problem.velIters;
@@ -124,6 +129,8 @@ public class ProblemInstanceTest extends TestbedTest {
         if (problem != null) {
             problem.init();
             m_world = problem.getWorld();
+            //Update the model's params to match the problem, if able
+            setModelSettingsForProblem(problem);
         }
         else {
             m_world = null;
