@@ -5,6 +5,8 @@ import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
 import edu.cmu.cs.graphics.hopper.control.BipedHopperDefinition;
 import edu.cmu.cs.graphics.hopper.eval.BipedObstacleEvaluatorDefinition;
 import edu.cmu.cs.graphics.hopper.eval.EvaluatorDefinition;
+import edu.cmu.cs.graphics.hopper.io.IOUtils;
+import edu.cmu.cs.graphics.hopper.oracle.AssociativeOracle;
 import edu.cmu.cs.graphics.hopper.oracle.ChallengeOracle;
 import edu.cmu.cs.graphics.hopper.oracle.UserOracle;
 import edu.cmu.cs.graphics.hopper.problems.ObstacleProblemDefinition;
@@ -19,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public class ExplorerMain {
@@ -29,6 +32,8 @@ public class ExplorerMain {
         DOMConfigurator.configure("config/log4j.xml");
 
         log.info("Starting a control exploration...");
+
+        String solutionsDir = "data/sols/";
 
 //        //Terrain test
 //        Random r = new Random();
@@ -49,26 +54,25 @@ public class ExplorerMain {
 
         //Test problem set
         List<ProblemDefinition> problems = new ArrayList<ProblemDefinition>();
-        for (int i = 1; i < 10; i++) {
-            for (int j = 1; j < 10; j++) {
+        for (int i = 1; i < 2; i++) {
+            for (int j = 1; j < 2; j++) {
                 problems.add(new ObstacleProblemDefinition(i,j));
             }
         }
 
-//        //Box2D world serialization/deserialization test
-//        Vec2 gravity = new Vec2(0, -10f);
-//        World world = new World(gravity);
-//        PbSerializer serializer = new PbSerializer();
-//        PbDeserializer deserializer = new PbDeserializer();
-//        Box2D.PbWorld serializedWorld =  serializer.serializeWorld(world).build();
-//        World world2 = deserializer.deserializeWorld(serializedWorld);
-//        System.out.println(world2.toString());
-
         //Test avatar
         AvatarDefinition avatarDef = new BipedHopperDefinition();
 
-        //Test oracle
-        ChallengeOracle<BipedHopperControl> oracle = new UserOracle<BipedHopperControl>();
+        //User oracle
+//        ChallengeOracle<BipedHopperControl> oracle = new UserOracle<BipedHopperControl>();
+
+        //TEST: Automated oracle
+        AssociativeOracle<BipedHopperControl> oracle = new AssociativeOracle<BipedHopperControl>();
+        for (int i = 1; i < 2; i++) {
+            String filename = String.format("%04d", i) + ".sol";
+            ProblemSolutionEntry entry = IOUtils.instance().loadProblemSolutionEntry(solutionsDir, filename);
+            oracle.addSolutionEntry(entry.problem, entry.solution);
+        }
 
         //Test evaluation
         EvaluatorDefinition evalDef = new BipedObstacleEvaluatorDefinition(30.0f, 20.0f, 1.0f, 5.0f);
@@ -80,5 +84,14 @@ public class ExplorerMain {
         log.info("Problems solved:          " + explorer.getNumSolvedProblems() + "/" + explorer.getNumProblems());
         log.info("Sim Tests used:           " + explorer.getNumTests());
         log.info("Oracle Challenges issued: " + explorer.getNumOracleChallenges());
+
+        //TEST: Save solution map to files
+        log.info("Oracle Challenges issued: " + explorer.getNumOracleChallenges());
+        Collection<ProblemSolutionEntry> solvedProblems = explorer.getSolvedProblems();
+        int i = 1;
+        for (ProblemSolutionEntry solvedProblem : solvedProblems) {
+            String filename = String.format("%04d", i) + ".sol";
+            IOUtils.instance().saveProblemSolutionEntry(solvedProblem, filePath, filename);
+        }
     }
 }

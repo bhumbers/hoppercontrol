@@ -5,12 +5,10 @@ import org.jbox2d.collision.shapes.PolygonShape;
 import org.jbox2d.dynamics.*;
 
 /** A solo obstacle clearing problem for avatar */
-public class ObstacleProblemDefinition extends ProblemDefinition {
+public final class ObstacleProblemDefinition extends ProblemDefinition {
      //Definition
     final protected float width;
     final protected float height;
-
-    protected Body body;
 
     public ObstacleProblemDefinition(float width, float height) {
         this.width = width; this.height = height;
@@ -28,12 +26,17 @@ public class ObstacleProblemDefinition extends ProblemDefinition {
         shape.setAsBox(width*0.5f, height*0.5f);
         fd.shape = shape;
 
-        body = world.createBody(bd);
+        Body body = world.createBody(bd);
         body.createFixture(fd);
     }
 
     @Override
     public String toString() {
         return "ObstacleProbDef: W=" + width + ", H=" + height;
+    }
+
+    @Override
+    public double[] getParamsArray() {
+        return new double[]{width, height};
     }
 }

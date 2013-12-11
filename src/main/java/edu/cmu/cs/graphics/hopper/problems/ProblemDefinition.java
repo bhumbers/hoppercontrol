@@ -10,4 +10,8 @@ import org.jbox2d.dynamics.World;
 public abstract class ProblemDefinition {
     /** Creates various components for this problem definition and adds to given world*/
     public abstract void init(World world);
-}
+
+    /** Returns a numeric array containing unique parameters for this problem.
+     * The length of the returned array should be the same for all problems of a given type. */
+    public abstract double[] getParamsArray();
+ }

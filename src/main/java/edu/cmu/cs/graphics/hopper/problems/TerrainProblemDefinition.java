@@ -14,12 +14,10 @@ import java.util.List;
  * Represents some problem space for an avatar to navigate
  * Terrain problems use heightmap representations
  */
-public class TerrainProblemDefinition extends ProblemDefinition {
+public final class TerrainProblemDefinition extends ProblemDefinition {
     //Definition
     final protected List<Float> heights;
     final protected List<Float> peakXDeltas;
-
-    protected Body terrainBody;
 
     /** Creates a new terrain problem with specified heights and constant peakXDelta between peak heights */
     public TerrainProblemDefinition(List<Float> heights, float peakXDelta) {
@@ -41,7 +39,7 @@ public class TerrainProblemDefinition extends ProblemDefinition {
         //TODO: Break up the single terrain body into multiple bodies for better performance on long terrains?
         BodyDef bd = new BodyDef();
         bd.type = BodyType.STATIC;
-        terrainBody = world.createBody(bd);
+        Body terrainBody = world.createBody(bd);
 
         FixtureDef fd = new FixtureDef();
         fd.density = 0.0f;
@@ -57,5 +55,17 @@ public class TerrainProblemDefinition extends ProblemDefinition {
         ChainShape shape = new ChainShape();
         shape.createChain(verts, verts.length);
         terrainBody.createFixture(shape, 0.0f);
+    }
+
+    @Override
+    public double[] getParamsArray() {
+        int n = heights.size() + peakXDeltas.size();
+        double[] params = new double[n];
+        int i = 0;
+        for (Float height : heights)
+            params[i++] = height;
+        for (Float peakXDelta : peakXDeltas)
+            params[i++] = peakXDelta;
+        return params;
     }
 }

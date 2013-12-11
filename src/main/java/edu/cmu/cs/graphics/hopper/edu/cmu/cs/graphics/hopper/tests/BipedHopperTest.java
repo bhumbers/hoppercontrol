@@ -6,6 +6,10 @@ import edu.cmu.cs.graphics.hopper.control.BipedHopper;
 import edu.cmu.cs.graphics.hopper.VecUtils;
 import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
+import edu.cmu.cs.graphics.hopper.explore.Explorer;
+import edu.cmu.cs.graphics.hopper.explore.ProblemSolutionEntry;
+import edu.cmu.cs.graphics.hopper.io.IOUtils;
+import edu.cmu.cs.graphics.hopper.problems.ObstacleProblemDefinition;
 import org.jbox2d.callbacks.DebugDraw;
 import org.jbox2d.collision.shapes.EdgeShape;
 import org.jbox2d.common.*;
@@ -31,8 +35,6 @@ public class BipedHopperTest extends TestbedTest {
 
     static DecimalFormat numFormat = new DecimalFormat( "#,###,###,##0.000" );
 
-    XStream xstream;
-
     float simTime = 0.0f;                  //total simulation time
 
     BipedHopper m_hopper;
@@ -46,10 +48,6 @@ public class BipedHopperTest extends TestbedTest {
 
     public BipedHopperTest() {
         super();
-        xstream = new XStream();
-        xstream.alias("CtrlProvider", ControlProvider.class);
-        xstream.alias("BipedCtrl", BipedHopperControl.class);
-        xstream.omitField(ControlProvider.class, "currControlIdx");
     }
 
     @Override
@@ -388,23 +386,10 @@ public class BipedHopperTest extends TestbedTest {
     }
 
     private void saveControlSequence() {
-        String fileName = "blah.csq";
-        String sequenceXML = xstream.toXML(provider);
-        log.info("Saved control sequence to file: " + fileName);
-
-        Writer writer = null;
-        try {
-            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName), "utf-8"));
-            writer.write(sequenceXML);
-        } catch (IOException ex) {
-            log.error("Error writing control sequence to file: " + fileName + "; " + ex.getStackTrace().toString());
-        } finally {
-            try {
-                writer.close();
-            } catch (Exception ex) {
-                log.warn("Exception while closing a control sequence file: " + fileName + "; " + ex.getStackTrace().toString());
-            }
-        }
+        String filename = "blah.csq";
+        ProblemSolutionEntry entry = new ProblemSolutionEntry(new ObstacleProblemDefinition(1,2), provider);
+        IOUtils.instance().saveProblemSolutionEntry(entry, "", filename);
+        log.info("Saved control sequence to file: " + filename);
     }
 }
 

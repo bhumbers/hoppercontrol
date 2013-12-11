@@ -79,4 +79,13 @@ public class ControlProvider<C extends Control> {
         else
             return null;
     }
+
+    public ControlProvider<C> duplicate() {
+        ControlProvider<C> dup = new ControlProvider<C>(this.controls.get(0));
+        dup.currControlIdx = this.currControlIdx;
+        dup.controls.clear();
+        for (int i = 0; i < this.controls.size(); i++)
+            dup.controls.add((C)this.controls.get(i).duplicate());
+        return dup;
+    }
 }

@@ -11,7 +11,7 @@ import edu.cmu.cs.graphics.hopper.problems.ProblemInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -24,17 +24,6 @@ public abstract class Explorer<C extends Control> {
 
     private static final Logger log = LoggerFactory.getLogger(Explorer.class);
 
-    protected final class SolvedProblemEntry {
-        final ProblemDefinition problem;              //problem that was solved
-        final ControlProvider solution;  //solution sequence used to solve it
-
-        SolvedProblemEntry(ProblemDefinition problem, ControlProvider solution) {
-            this.problem = problem;
-            this.solution = solution;
-        }
-    }
-
-
     protected int numTests;
     protected int numOracleChallenges;
 
@@ -45,12 +34,14 @@ public abstract class Explorer<C extends Control> {
     public int getNumUnsolvedProblems() {return unsolvedProblems.size();}
     public int getNumSolvedProblems() {return solvedProblems.size();}
 
+    public Collection<ProblemSolutionEntry> getSolvedProblems() {return solvedProblems;}
+
     ChallengeOracle<C> oracle;
 
     AvatarDefinition avatarDef;
 
     Set<ProblemDefinition> unsolvedProblems;
-    Set<SolvedProblemEntry> solvedProblems;
+    Set<ProblemSolutionEntry> solvedProblems;
     Set<ProblemDefinition> oracleChallengeProblems;
 
     /** Runs exploration in a continuous loop until all problems are solved */
@@ -66,7 +57,7 @@ public abstract class Explorer<C extends Control> {
 
         //Note: Linked hash sets used to preserve insertion ordering for iteration
         unsolvedProblems = new LinkedHashSet<ProblemDefinition>();
-        solvedProblems = new LinkedHashSet<SolvedProblemEntry>();
+        solvedProblems = new LinkedHashSet<ProblemSolutionEntry>();
         oracleChallengeProblems = new LinkedHashSet<ProblemDefinition>();
 
         unsolvedProblems.addAll(problems);
@@ -114,6 +105,9 @@ public abstract class Explorer<C extends Control> {
                 numOracleChallenges++;
                 ControlProvider<C> challengeSolution = oracle.solveChallenge(challenge, avatarDef, evalDef);
 
+                //TEST: Use a safe copy of the solution
+//                challengeSolution = challengeSolution.duplicate();
+
                 boolean oracleSolutionOk = true;
 
                 //DEBUGGING: Verify that oracle solution is correct.
@@ -142,7 +136,7 @@ public abstract class Explorer<C extends Control> {
     protected void markProblemSolved(ProblemDefinition problem, ControlProvider<C> solution) {
         unsolvedProblems.remove(problem);
         oracleChallengeProblems.remove(problem);   //remove in case it's marked as oracle challenge
-        solvedProblems.add(new SolvedProblemEntry(problem, solution));
+        solvedProblems.add(new ProblemSolutionEntry(problem, solution));
     }
 
     /**Sets up for a new exploration (called at start of explore())  */

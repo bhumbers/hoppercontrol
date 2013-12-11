@@ -41,11 +41,11 @@ public class HopperTestbedMain {
                                                         new BipedHopperDefinition(),
                                                         new BipedObstacleEvaluatorDefinition(30.0f, 20.0f, 1.0f, 5.0f),
                                                         ctrlProvider);
-        problem.init();
-        piTest.setProblem(problem);
-        model.addTest(piTest);
-
         model.addTest(new BipedHopperTest());
+        problem.init();
+        model.addTest(piTest);
+        piTest.setProblem(problem);
+
         model.addTest(new WormTest());
 
         TestbedFrame testbed = new TestbedFrame(model, panel, TestbedController.UpdateBehavior.UPDATE_CALLED);
