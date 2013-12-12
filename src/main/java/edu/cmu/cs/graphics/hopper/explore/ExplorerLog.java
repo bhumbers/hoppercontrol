@@ -12,7 +12,7 @@ public class ExplorerLog {
     }
 
     public String getCSVHeader()    {
-        return "Num Unsolved, Num Solved, Num Failed, Num Tests, Num Challenges,\n";
+        return "Num Tests, Num Challenges, Num Unsolved, Num Solved, Num Failed,\n";
     }
 
     //Writes complete log to CSV string

@@ -110,7 +110,7 @@ public abstract class Explorer<C extends Control> {
         int problemIdx = 0;
         while (!unsolvedProblems.isEmpty() && (maxTests < 0  || numTests < maxTests)) {
             ProblemDefinition problemDef = getNextProblemToTest();
-            prepareForNextProblem();
+            prepareForProblem(problemDef);
 
             log.info("Attempting to solve problem #" + problemIdx);
 
@@ -137,11 +137,9 @@ public abstract class Explorer<C extends Control> {
             }
             else {
                 log.info("Unable to find solution to problem; adding to oracle challenge list  problem #" + problemIdx);
+                unsolvedProblems.remove(problemDef);  //remove from unsolved set... oracle will solve for us (or fail trying)
                 oracleChallengeProblems.add(problemDef);
-                //TODO: should we also remove from unsolvedProblems so that we don't try to re-solve while waiting for oracle?
             }
-
-            addLogEntry();
             problemIdx++;
 
             //If this explorer wishes to do so at this moment, poll the oracles
@@ -198,7 +196,7 @@ public abstract class Explorer<C extends Control> {
                 log.info("Oracle #" + oracleIdx + " successfully solved challenge #" + numOracleChallenges + " ; marking as solved");
                 challengeSolFound = true;
                 markProblemSolved(challenge, challengeSolution);
-                onChallengeSolutionGiven(challengeSolution);
+                onChallengeSolutionGiven(challenge, challengeSolution);
                 break;
             }
         }
@@ -209,9 +207,11 @@ public abstract class Explorer<C extends Control> {
         }
     }
 
-    protected void markProblemSolved(ProblemDefinition problem, ControlProvider<C> solution) {
+    private void markProblemSolved(ProblemDefinition problem, ControlProvider<C> solution) {
+        //NOTE: If we're marking it solved, it will currently be either in either unsolved set or oracle challenge set
+        //For simplicity, just be sure it's removed from both
         unsolvedProblems.remove(problem);
-        oracleChallengeProblems.remove(problem);   //remove in case it's marked as oracle challenge
+        oracleChallengeProblems.remove(problem);
         solvedProblems.add(new ProblemSolutionEntry(problem, solution));
 
         if (solsSaved) {
@@ -220,22 +220,26 @@ public abstract class Explorer<C extends Control> {
             log.info("Saving solution to disk...");
             IOUtils.instance().saveProblemSolutionEntry(new ProblemSolutionEntry(problem, solution), solsSavePath, filename);
         }
+
+        addLogEntry();
     }
 
     /** Marks problem as having no solution to be found (even from oracles) */
     protected void markProblemFailed(ProblemDefinition problem) {
-        unsolvedProblems.remove(problem);
         oracleChallengeProblems.remove(problem);
         failedProblems.add(problem);
+
+        addLogEntry();
     }
 
     protected void addLogEntry() {
         ExplorerLogEntry entry = new ExplorerLogEntry(
+                getNumTests(),
+                getNumOracleChallenges(),
                 getNumUnsolvedProblems(),
                 getNumSolvedProblems(),
-                getNumFailedProblems(),
-                getNumTests(),
-                getNumOracleChallenges());
+                getNumFailedProblems()
+                );
         expLog.entries.add(entry);
 
         //Write the new log CSV line if being saved
@@ -254,7 +258,7 @@ public abstract class Explorer<C extends Control> {
     protected abstract void initExploration();
 
     /** Change any internal state in preparation for solving a new problem */
-    protected abstract void prepareForNextProblem();
+    protected abstract void prepareForProblem(ProblemDefinition problemDef);
 
     /** Returns what this explorer believes is the most useful problem to try and solve */
     protected abstract ProblemDefinition getNextProblemToTest();
@@ -268,5 +272,5 @@ public abstract class Explorer<C extends Control> {
     protected abstract ProblemDefinition getNextChallengeProblem();
 
     /** Runs any additional logic (aside from marking a problem solved) for when a new challenge solution is provided */
-    protected void onChallengeSolutionGiven(ControlProvider<C> challengeSolution) {}
+    protected void onChallengeSolutionGiven(ProblemDefinition challenge, ControlProvider<C> challengeSolution) {}
 }

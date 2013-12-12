@@ -35,23 +35,22 @@ public class ExplorerMain {
 
         log.info("Starting a control exploration...");
 
-        String explorationName = "Columbus";
-        String autoOracleSolsDir = "data/sols2/";
+        String explorationName = "SmartControl";
+        String autoOracleSolsDir = "data/oracles/ColumbusAutoOracleAll/";
         boolean saveSols = true;
-        String saveSolsDir = "exploration/" + explorationName + "/sols/";
+        String saveSolsDir = "data/exploration/" + explorationName + "/sols/";
         boolean saveLog = true;
-        String saveLogDir = "exploration/" + explorationName + "/";
+        String saveLogDir = "data/exploration/" + explorationName + "/";
 
         List<ProblemDefinition> problems = new ArrayList<ProblemDefinition>();
 
         //Terrain test
-        int terrainLength = 3;
+        int terrainLength = 5;
         float terrainDeltaX = 2.0f;
-        float terrainMaxAmp = 2.0f;
+        float terrainMaxAmp = 3.0f;
         Random r = new Random();
         r.setSeed(12345);
         for (int i = 0; i < 200; i++) {
-
             float y = 0.0f;
             List<Float> verts = new ArrayList<Float>(terrainLength);
             verts.add(0.01f);
@@ -91,7 +90,7 @@ public class ExplorerMain {
         float minXForSuccess = terrainLength * terrainDeltaX;
         EvaluatorDefinition evalDef = new BipedObstacleEvaluatorDefinition(30.0f, minXForSuccess, 1.0f, 3.0f);
 
-        Explorer explorer = new SimpleExplorer();
+        Explorer explorer = new SmartControlExplorer();
         explorer.setSolutionsSaved(saveSols);
         explorer.setSolutionsSavePath(saveSolsDir);
         explorer.setLogSaved(saveLog);

@@ -54,7 +54,7 @@ public class AssociativeOracle<C extends Control> extends ChallengeOracle<C> {
                 return null;
             }
 
-            return (ControlProvider<C>)solutionsByProblem.nearest(problemParams);
+            return (ControlProvider<C>)solutionsByProblem.search(problemParams);
         }
         return null;
     }

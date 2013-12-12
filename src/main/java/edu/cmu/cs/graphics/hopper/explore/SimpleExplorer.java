@@ -20,7 +20,7 @@ public class SimpleExplorer<C extends Control> extends Explorer<C> {
     }
 
     @Override
-    protected void prepareForNextProblem() {
+    protected void prepareForProblem(ProblemDefinition problemDef) {
         nextControlProviderIdx = 0;
     }
 
@@ -51,7 +51,7 @@ public class SimpleExplorer<C extends Control> extends Explorer<C> {
     }
 
     @Override
-    protected void onChallengeSolutionGiven(ControlProvider<C> challengeSolution) {
+    protected void onChallengeSolutionGiven(ProblemDefinition challenge, ControlProvider<C> challengeSolution) {
         //Add the new solution to our ensemble (control vocabulary)
         controlEnsemble.add(challengeSolution);
     }
