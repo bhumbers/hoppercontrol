@@ -12,10 +12,7 @@ import edu.cmu.cs.graphics.hopper.problems.ProblemInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /** Runs automated explorations, given a problem set*/
 public abstract class Explorer<C extends Control> {
@@ -34,6 +31,7 @@ public abstract class Explorer<C extends Control> {
     public int getNumProblems() {return getNumSolvedProblems() + getNumUnsolvedProblems();}
     public int getNumUnsolvedProblems() {return unsolvedProblems.size();}
     public int getNumSolvedProblems() {return solvedProblems.size();}
+    public int getNumFailedProblems() {return failedProblems.size();}
 
     public Collection<ProblemSolutionEntry> getSolvedProblems() {return solvedProblems;}
 
@@ -44,31 +42,42 @@ public abstract class Explorer<C extends Control> {
         solsSavePath = path;
     }
 
-    ChallengeOracle<C> oracle;
+    //Oracles consulted for challenge problems. Challenges are presented to oracles in successive
+    //order of this list until some Oracle solves it.
+    List<ChallengeOracle<C>> oracles;
 
     AvatarDefinition avatarDef;
+    EvaluatorDefinition evalDef;
 
     Set<ProblemDefinition> unsolvedProblems;
     Set<ProblemSolutionEntry> solvedProblems;
+    Set<ProblemDefinition> failedProblems;      //problems submitted to oracles for sol, but for which all oracles failed to find sol
     Set<ProblemDefinition> oracleChallengeProblems;
 
     boolean solsSaved = false;
     String solsSavePath = "";
 
     /** Runs exploration in a continuous loop until all problems are solved */
-    public void explore(List<ProblemDefinition> problems, AvatarDefinition avatarDef, EvaluatorDefinition evalDef, ChallengeOracle<C> oracle) {explore(problems, avatarDef, evalDef, oracle, -1);}
+    public void explore(List<ProblemDefinition> problems, AvatarDefinition avatarDef, EvaluatorDefinition evalDef, List<ChallengeOracle<C>> oracles) {
+        explore(problems, avatarDef, evalDef, oracles, -1);
+    }
 
     /** Runs exploration in a continuous loop until max control tests is reached or all problems are solved
      * Runs until completion if maxTests == -1 (or anything < 0). */
-    public void explore(List<ProblemDefinition> problems, AvatarDefinition avatarDef, EvaluatorDefinition evalDef, ChallengeOracle<C> oracle, int maxTests) {
+    public void explore(List<ProblemDefinition> problems, AvatarDefinition avatarDef, EvaluatorDefinition evalDef, List<ChallengeOracle<C>> oracles, int maxTests) {
         numTests = 0;
         numOracleChallenges = 0;
-        this.oracle = oracle;
+
+        this.oracles = new ArrayList<ChallengeOracle<C>>();
+        this.oracles.addAll(oracles);
+
         this.avatarDef = avatarDef;
+        this.evalDef = evalDef;
 
         //Note: Linked hash sets used to preserve insertion ordering for iteration
         unsolvedProblems = new LinkedHashSet<ProblemDefinition>();
         solvedProblems = new LinkedHashSet<ProblemSolutionEntry>();
+        failedProblems = new LinkedHashSet<ProblemDefinition>();
         oracleChallengeProblems = new LinkedHashSet<ProblemDefinition>();
 
         unsolvedProblems.addAll(problems);
@@ -76,11 +85,12 @@ public abstract class Explorer<C extends Control> {
         initExploration();
 
         //While there remain problems to solve, get a new one and try to solve it
+        int problemIdx = 0;
         while (!unsolvedProblems.isEmpty() && (maxTests < 0  || numTests < maxTests)) {
             ProblemDefinition problemDef = getNextProblemToTest();
             prepareForNextProblem();
 
-            log.info("Attempting to solve problem: " + problemDef.toString());
+            log.info("Attempting to solve problem #" + problemIdx);
 
             //Test control sequences until problem is solved or we give up
             boolean problemSolved = false;
@@ -100,7 +110,7 @@ public abstract class Explorer<C extends Control> {
             //If solved, mark it as such
             //Otherwise, add to list of problems for oracle to solve
             if (problemSolved)    {
-                log.info("Found solution to problem: " + problemDef.toString());
+                log.info("Found solution to problem #" + problemIdx);
                 markProblemSolved(problemDef, potentialSolution);
             }
             else {
@@ -109,42 +119,61 @@ public abstract class Explorer<C extends Control> {
                 //TODO: should we also remove from unsolvedProblems so that we don't try to re-solve while waiting for oracle?
             }
 
-            //If this explorer wishes to do so at this moment, poll the oracle
+            problemIdx++;
+
+            //If this explorer wishes to do so at this moment, poll the oracles
             ProblemDefinition challenge = getNextChallengeProblem();
-            if (challenge != null) {
-                log.info("Sending challenge #" + numOracleChallenges + " to oracle: " + problemDef.toString());
-                numOracleChallenges++;
-                ControlProvider<C> challengeSolution = oracle.solveChallenge(challenge, avatarDef, evalDef);
+            if (challenge != null)
+                sendChallengeToOracles(challenge);
+        }
+    }
 
-                //TEST: Use a safe copy of the solution
-//                challengeSolution = challengeSolution.duplicate();
+    protected void sendChallengeToOracles(ProblemDefinition challenge) {
+        int oracleChallengeIdx = numOracleChallenges;
+        log.info("Sending challenge #" + oracleChallengeIdx + " to oracles");
+        numOracleChallenges++;
 
-                boolean oracleSolutionOk = true;
 
-                if (challengeSolution == null) {
-                    log.info("Oracle returned null solution for problem: " + problemDef.toString());
+        boolean challengeSolFound = false;
+        for (int oracleIdx = 0; oracleIdx < oracles.size(); oracleIdx++) {
+            ChallengeOracle<C> oracle = oracles.get(oracleIdx);
+            ControlProvider<C> challengeSolution = oracle.solveChallenge(challenge, avatarDef, evalDef);
+
+            //TEST: Use a safe copy of the solution
+            //                challengeSolution = challengeSolution.duplicate();
+
+            boolean oracleSolutionOk = true;
+
+            if (challengeSolution == null) {
+                log.info("Oracle #" + oracleIdx + " returned null solution for challenge # " + oracleChallengeIdx);
+                oracleSolutionOk = false;
+            }
+            //DEBUGGING: Verify that oracle solution is correct.
+            else if (ENABLE_ORACLE_SOLUTION_VERIFICATION_REVIEW) {
+                challengeSolution.goToFirstControl();
+                ProblemInstance problem = new ProblemInstance(challenge, avatarDef, evalDef, challengeSolution);
+                problem.setUseSampling(true); //for debugging
+                problem.init();
+                problem.run();
+                if (problem.getStatus() != Evaluator.Status.SUCCESS) {
+                    log.info("Oracle returned an incorrect solution to challenge # " + oracleChallengeIdx);
                     oracleSolutionOk = false;
-                }
-                //DEBUGGING: Verify that oracle solution is correct.
-                else if (ENABLE_ORACLE_SOLUTION_VERIFICATION_REVIEW) {
-                    challengeSolution.goToFirstControl();
-                    ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, evalDef, challengeSolution);
-                    problem.setUseSampling(true); //for debugging
-                    problem.init();
-                    problem.run();
-                    if (problem.getStatus() != Evaluator.Status.SUCCESS) {
-                        log.warn("Oracle returned an incorrect challenge solution. That shouldn't happen. ProblemDefinition hash: " + challenge.hashCode());
-                        oracleSolutionOk = false;
-                        oracle.sendForReview(problem);
-                    }
-                }
-
-                if (oracleSolutionOk)         {
-                    log.info("Oracle successfully solved challenge; adding to list of solved problems: " + problemDef.toString());
-                    markProblemSolved(challenge, challengeSolution);
-                    onChallengeSolutionGiven(challengeSolution);
+//                    oracle.sendForReview(problem);
                 }
             }
+
+            if (oracleSolutionOk)         {
+                log.info("Oracle #" + oracleIdx + " successfully solved challenge # " + numOracleChallenges + " ; marking as solved");
+                challengeSolFound = true;
+                markProblemSolved(challenge, challengeSolution);
+                onChallengeSolutionGiven(challengeSolution);
+                break;
+            }
+        }
+
+        //Mark failed if no oracle found a solution at this point
+        if (challengeSolFound == false) {
+            markProblemFailed(challenge);
         }
     }
 
@@ -156,9 +185,16 @@ public abstract class Explorer<C extends Control> {
         if (solsSaved) {
             int solNum = solvedProblems.size();
             String filename = String.format("%05d", solNum) + ".sol";
-            log.info("Saving solution to disk: " + problem.toString() + "...");
+            log.info("Saving solution to disk...");
             IOUtils.instance().saveProblemSolutionEntry(new ProblemSolutionEntry(problem, solution), solsSavePath, filename);
         }
+    }
+
+    /** Marks problem as having no solution to be found (even from oracles) */
+    protected void markProblemFailed(ProblemDefinition problem) {
+        unsolvedProblems.remove(problem);
+        oracleChallengeProblems.remove(problem);
+        failedProblems.add(problem);
     }
 
     /**Sets up for a new exploration (called at start of explore())  */

@@ -45,7 +45,7 @@ public class ExplorerMain {
         float terrainMaxAmp = 1.0f;
         Random r = new Random();
         r.setSeed(12345);
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 20; i++) {
 
             float y = 0.0f;
             List<Float> verts = new ArrayList<Float>(terrainLength);
@@ -69,14 +69,18 @@ public class ExplorerMain {
         //Test avatar
         AvatarDefinition avatarDef = new BipedHopperDefinition();
 
-        //User oracle
-//        ChallengeOracle<BipedHopperControl> oracle = new UserOracle<BipedHopperControl>();
-
-        //TEST: Automated oracle
-        AssociativeOracle<BipedHopperControl> oracle = new AssociativeOracle<BipedHopperControl>();
+        //Automated oracle
+        AssociativeOracle<BipedHopperControl> autoOracle = new AssociativeOracle<BipedHopperControl>();
         List<ProblemSolutionEntry> solutionEntries = IOUtils.instance().loadAllProblemSolutionEntriesInDir(solutionsDir);
         for (ProblemSolutionEntry solutionEntry : solutionEntries)
-            oracle.addSolutionEntry(solutionEntry.problem, solutionEntry.solution);
+            autoOracle.addSolutionEntry(solutionEntry.problem, solutionEntry.solution);
+
+        //User oracle
+        UserOracle<BipedHopperControl> userOracle = new UserOracle<BipedHopperControl>();
+
+        List<ChallengeOracle<BipedHopperControl>> oracles = new ArrayList<ChallengeOracle<BipedHopperControl>>();
+        oracles.add(autoOracle);
+        oracles.add(userOracle);
 
         //Test evaluation
         EvaluatorDefinition evalDef = new BipedObstacleEvaluatorDefinition(30.0f, 20.0f, 1.0f, 5.0f);
@@ -84,12 +88,13 @@ public class ExplorerMain {
         Explorer explorer = new SimpleExplorer();
         explorer.setSolutionsSaved(true);
         explorer.setSolutionsSavePath(solutionsDir);
-        explorer.explore(problems, avatarDef, evalDef, oracle);
+        explorer.explore(problems, avatarDef, evalDef, oracles);
 
         log.info("Control exploration COMPLETE");
         log.info("Problems solved:          " + explorer.getNumSolvedProblems() + "/" + explorer.getNumProblems());
         log.info("Sim Tests used:           " + explorer.getNumTests());
         log.info("Oracle Challenges issued: " + explorer.getNumOracleChallenges());
+        log.info("Oracle Challenges Failed: " + explorer.getNumFailedProblems());
 
         //TEST: Save solution map to files
 //        Collection<ProblemSolutionEntry> solvedProblems = explorer.getSolvedProblems();
