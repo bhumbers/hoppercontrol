@@ -9,6 +9,7 @@ import edu.cmu.cs.graphics.hopper.explore.Explorer;
 import edu.cmu.cs.graphics.hopper.explore.ProblemSolutionEntry;
 import edu.cmu.cs.graphics.hopper.problems.ObstacleProblemDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
+import edu.cmu.cs.graphics.hopper.problems.TerrainProblemDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +39,7 @@ public class IOUtils {
         xstream.alias("BipedCtrl", BipedHopperControl.class);
         xstream.alias("ProbSolEntry", ProblemSolutionEntry.class);
 
-        xstream.alias("TerrainProbDef", ObstacleProblemDefinition.class);
+        xstream.alias("TerrainProbDef", TerrainProblemDefinition.class);
         xstream.alias("ObsProbDef", ObstacleProblemDefinition.class);
     }
 
