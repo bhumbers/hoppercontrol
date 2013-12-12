@@ -5,6 +5,7 @@ import edu.cmu.cs.graphics.hopper.control.Control;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
 import edu.cmu.cs.graphics.hopper.eval.Evaluator;
 import edu.cmu.cs.graphics.hopper.eval.EvaluatorDefinition;
+import edu.cmu.cs.graphics.hopper.io.IOUtils;
 import edu.cmu.cs.graphics.hopper.oracle.ChallengeOracle;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemInstance;
@@ -36,6 +37,13 @@ public abstract class Explorer<C extends Control> {
 
     public Collection<ProblemSolutionEntry> getSolvedProblems() {return solvedProblems;}
 
+    public void setSolutionsSaved(boolean val) {
+        solsSaved = val;
+    }
+    public void setSolutionsSavePath(String path) {
+        solsSavePath = path;
+    }
+
     ChallengeOracle<C> oracle;
 
     AvatarDefinition avatarDef;
@@ -43,6 +51,9 @@ public abstract class Explorer<C extends Control> {
     Set<ProblemDefinition> unsolvedProblems;
     Set<ProblemSolutionEntry> solvedProblems;
     Set<ProblemDefinition> oracleChallengeProblems;
+
+    boolean solsSaved = false;
+    String solsSavePath = "";
 
     /** Runs exploration in a continuous loop until all problems are solved */
     public void explore(List<ProblemDefinition> problems, AvatarDefinition avatarDef, EvaluatorDefinition evalDef, ChallengeOracle<C> oracle) {explore(problems, avatarDef, evalDef, oracle, -1);}
@@ -110,8 +121,12 @@ public abstract class Explorer<C extends Control> {
 
                 boolean oracleSolutionOk = true;
 
+                if (challengeSolution == null) {
+                    log.info("Oracle returned null solution for problem: " + problemDef.toString());
+                    oracleSolutionOk = false;
+                }
                 //DEBUGGING: Verify that oracle solution is correct.
-                if (ENABLE_ORACLE_SOLUTION_VERIFICATION_REVIEW) {
+                else if (ENABLE_ORACLE_SOLUTION_VERIFICATION_REVIEW) {
                     challengeSolution.goToFirstControl();
                     ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, evalDef, challengeSolution);
                     problem.setUseSampling(true); //for debugging
@@ -137,6 +152,13 @@ public abstract class Explorer<C extends Control> {
         unsolvedProblems.remove(problem);
         oracleChallengeProblems.remove(problem);   //remove in case it's marked as oracle challenge
         solvedProblems.add(new ProblemSolutionEntry(problem, solution));
+
+        if (solsSaved) {
+            int solNum = solvedProblems.size();
+            String filename = String.format("%05d", solNum) + ".sol";
+            log.info("Saving solution to disk: " + problem.toString() + "...");
+            IOUtils.instance().saveProblemSolutionEntry(new ProblemSolutionEntry(problem, solution), solsSavePath, filename);
+        }
     }
 
     /**Sets up for a new exploration (called at start of explore())  */

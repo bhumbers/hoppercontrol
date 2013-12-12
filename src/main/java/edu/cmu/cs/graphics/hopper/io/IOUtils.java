@@ -13,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Just a class to centralize read/write of various things...
  * not great, modular design, but time is short :) -bh, 12.11.2013 .*/
@@ -36,6 +38,7 @@ public class IOUtils {
         xstream.alias("BipedCtrl", BipedHopperControl.class);
         xstream.alias("ProbSolEntry", ProblemSolutionEntry.class);
 
+        xstream.alias("TerrainProbDef", ObstacleProblemDefinition.class);
         xstream.alias("ObsProbDef", ObstacleProblemDefinition.class);
     }
 
@@ -44,11 +47,24 @@ public class IOUtils {
         saveToFile(entryXML, path, filename);
     }
 
+    public List<ProblemSolutionEntry> loadAllProblemSolutionEntriesInDir(String path) {
+        File[] files = new File(path).listFiles(new FilenameFilter() {
+            public boolean accept(File dir, String name) {
+                return name.toLowerCase().endsWith(".sol");
+            }
+        });
+
+        List<ProblemSolutionEntry> entries = new ArrayList<ProblemSolutionEntry>();
+        for (File file : files)
+            entries.add(this.loadProblemSolutionEntry(path, file.getName()));
+        return entries;
+    }
+
     public ProblemSolutionEntry loadProblemSolutionEntry(String path, String filename) {
         ProblemSolutionEntry entry = null;
         FileReader fileReader = null;
         try {
-            fileReader = new FileReader(filename);
+            fileReader = new FileReader(path + filename);
             entry = (ProblemSolutionEntry)xstream.fromXML(fileReader);
         }
         catch (Exception error) {
