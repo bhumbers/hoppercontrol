@@ -48,7 +48,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
     private final float HOP_SPRING_DRAG_GAIN = 100.0f;
     private final float HOP_SPRING_EXPONENT = 1.0f;
 
-    private final Vec2 CHASSIS_SIZE = new Vec2(2f, 0.5f);
+    private final Vec2 CHASSIS_SIZE = new Vec2(1f, 0.5f);
     private final float CHASSIS_DENSITY = 2.0f;
 
     private final Vec2 HIP_SIZE = new Vec2(0.3f, 0.1f);
