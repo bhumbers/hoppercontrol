@@ -6,3 +6,6 @@ local.properties
 bin/
 target/
 *.log
+
+data
+exploration
