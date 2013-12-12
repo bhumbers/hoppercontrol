@@ -19,4 +19,7 @@ public abstract class ChallengeOracle<C extends Control> {
      * to this oracle so it may "review" it (ie: let the user view it)
      * Just a bit of a helper for debug viualization. */
     public void sendForReview(ProblemInstance problem) {}
+
+    /** Run any cleanup for this oracle before it's trashed (eg: close GUIs, release files, etc.)*/
+    public void close() {}
 }

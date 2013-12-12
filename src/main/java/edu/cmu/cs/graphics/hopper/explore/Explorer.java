@@ -12,6 +12,8 @@ import edu.cmu.cs.graphics.hopper.problems.ProblemInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 
 /** Runs automated explorations, given a problem set*/
@@ -22,25 +24,10 @@ public abstract class Explorer<C extends Control> {
 
     private static final Logger log = LoggerFactory.getLogger(Explorer.class);
 
+    protected ExplorerLog expLog;
+
     protected int numTests;
     protected int numOracleChallenges;
-
-    public int getNumTests() {return numTests;}
-    public int getNumOracleChallenges() {return numOracleChallenges;}
-
-    public int getNumProblems() {return getNumSolvedProblems() + getNumUnsolvedProblems();}
-    public int getNumUnsolvedProblems() {return unsolvedProblems.size();}
-    public int getNumSolvedProblems() {return solvedProblems.size();}
-    public int getNumFailedProblems() {return failedProblems.size();}
-
-    public Collection<ProblemSolutionEntry> getSolvedProblems() {return solvedProblems;}
-
-    public void setSolutionsSaved(boolean val) {
-        solsSaved = val;
-    }
-    public void setSolutionsSavePath(String path) {
-        solsSavePath = path;
-    }
 
     //Oracles consulted for challenge problems. Challenges are presented to oracles in successive
     //order of this list until some Oracle solves it.
@@ -57,6 +44,28 @@ public abstract class Explorer<C extends Control> {
     boolean solsSaved = false;
     String solsSavePath = "";
 
+    boolean logSaved = false;
+    String logSavePath = "";
+
+    FileWriter logWriter;
+
+    public ExplorerLog getLog() {return expLog;}
+
+    public int getNumTests() {return numTests;}
+    public int getNumOracleChallenges() {return numOracleChallenges;}
+
+    public int getNumProblems() {return getNumSolvedProblems() + getNumUnsolvedProblems();}
+    public int getNumUnsolvedProblems() {return unsolvedProblems.size();}
+    public int getNumSolvedProblems() {return solvedProblems.size();}
+    public int getNumFailedProblems() {return failedProblems.size();}
+
+    public Collection<ProblemSolutionEntry> getSolvedProblems() {return solvedProblems;}
+
+    public void setSolutionsSaved(boolean val) { solsSaved = val; }
+    public void setSolutionsSavePath(String path) { solsSavePath = path; }
+    public void setLogSaved(boolean val) { logSaved = val; }
+    public void setLogSavePath(String path) { logSavePath = path; }
+
     /** Runs exploration in a continuous loop until all problems are solved */
     public void explore(List<ProblemDefinition> problems, AvatarDefinition avatarDef, EvaluatorDefinition evalDef, List<ChallengeOracle<C>> oracles) {
         explore(problems, avatarDef, evalDef, oracles, -1);
@@ -65,6 +74,19 @@ public abstract class Explorer<C extends Control> {
     /** Runs exploration in a continuous loop until max control tests is reached or all problems are solved
      * Runs until completion if maxTests == -1 (or anything < 0). */
     public void explore(List<ProblemDefinition> problems, AvatarDefinition avatarDef, EvaluatorDefinition evalDef, List<ChallengeOracle<C>> oracles, int maxTests) {
+        expLog = new ExplorerLog();
+        if (logSaved) {
+            IOUtils.instance().ensurePathExists(logSavePath);
+            try {
+                logWriter = new FileWriter(logSavePath + "exploration_log.csv");
+                logWriter.write(expLog.getCSVHeader());
+                logWriter.flush();
+            }
+            catch (IOException error) {
+                log.error("Error creating file path: " + logSavePath);
+            }
+        }
+
         numTests = 0;
         numOracleChallenges = 0;
 
@@ -114,17 +136,27 @@ public abstract class Explorer<C extends Control> {
                 markProblemSolved(problemDef, potentialSolution);
             }
             else {
-                log.info("Unable to find solution to problem; adding to oracle challenge list: " + problemDef.toString());
+                log.info("Unable to find solution to problem; adding to oracle challenge list  problem #" + problemIdx);
                 oracleChallengeProblems.add(problemDef);
                 //TODO: should we also remove from unsolvedProblems so that we don't try to re-solve while waiting for oracle?
             }
 
+            addLogEntry();
             problemIdx++;
 
             //If this explorer wishes to do so at this moment, poll the oracles
             ProblemDefinition challenge = getNextChallengeProblem();
             if (challenge != null)
                 sendChallengeToOracles(challenge);
+        }
+
+        if (logWriter != null)   {
+            try {
+                logWriter.close();
+            }
+            catch (IOException error) {
+                log.error("Error closing log file: " + logSavePath);
+            }
         }
     }
 
@@ -156,14 +188,14 @@ public abstract class Explorer<C extends Control> {
                 problem.init();
                 problem.run();
                 if (problem.getStatus() != Evaluator.Status.SUCCESS) {
-                    log.info("Oracle returned an incorrect solution to challenge # " + oracleChallengeIdx);
+                    log.info("Oracle #" + oracleIdx + " returned an incorrect solution to challenge # " + oracleChallengeIdx);
                     oracleSolutionOk = false;
 //                    oracle.sendForReview(problem);
                 }
             }
 
             if (oracleSolutionOk)         {
-                log.info("Oracle #" + oracleIdx + " successfully solved challenge # " + numOracleChallenges + " ; marking as solved");
+                log.info("Oracle #" + oracleIdx + " successfully solved challenge #" + numOracleChallenges + " ; marking as solved");
                 challengeSolFound = true;
                 markProblemSolved(challenge, challengeSolution);
                 onChallengeSolutionGiven(challengeSolution);
@@ -195,6 +227,27 @@ public abstract class Explorer<C extends Control> {
         unsolvedProblems.remove(problem);
         oracleChallengeProblems.remove(problem);
         failedProblems.add(problem);
+    }
+
+    protected void addLogEntry() {
+        ExplorerLogEntry entry = new ExplorerLogEntry(
+                getNumUnsolvedProblems(),
+                getNumSolvedProblems(),
+                getNumFailedProblems(),
+                getNumTests(),
+                getNumOracleChallenges());
+        expLog.entries.add(entry);
+
+        //Write the new log CSV line if being saved
+        if (logSaved && logWriter != null) {
+            try {
+                logWriter.write(entry.getCSVRow());
+                logWriter.flush();
+            }
+            catch (IOException error) {
+                log.error("Error writing to log file: " + logSavePath);
+            }
+        }
     }
 
     /**Sets up for a new exploration (called at start of explore())  */

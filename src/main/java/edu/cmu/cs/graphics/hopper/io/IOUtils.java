@@ -42,6 +42,20 @@ public class IOUtils {
         xstream.alias("ObsProbDef", ObstacleProblemDefinition.class);
     }
 
+    public void ensurePathExists(String path) {
+        File filePath = new File(path);
+        if (!filePath.exists())     {
+            try {
+                filePath.mkdirs();
+            }
+            catch (Exception e) {
+                log.error("Error creating file path: " + path);
+                logStackTraceError(e);
+            }
+        }
+
+    }
+
     public void saveProblemSolutionEntry(ProblemSolutionEntry entry, String path, String filename) {
         String entryXML = xstream.toXML(entry);
         saveToFile(entryXML, path, filename);
@@ -55,8 +69,10 @@ public class IOUtils {
         });
 
         List<ProblemSolutionEntry> entries = new ArrayList<ProblemSolutionEntry>();
-        for (File file : files)
-            entries.add(this.loadProblemSolutionEntry(path, file.getName()));
+        if (files != null) {
+            for (File file : files)
+                entries.add(this.loadProblemSolutionEntry(path, file.getName()));
+        }
         return entries;
     }
 
@@ -83,16 +99,7 @@ public class IOUtils {
     }
 
     private void saveToFile(String data, String path, String filename) {
-        File filePath = new File(path);
-        if (!filePath.exists())     {
-            try {
-                filePath.mkdirs();
-            }
-            catch (Exception e) {
-                log.error("Error creating file path: " + path);
-                logStackTraceError(e);
-            }
-        }
+        ensurePathExists(path);
 
         //Write contents
         Writer writer = null;

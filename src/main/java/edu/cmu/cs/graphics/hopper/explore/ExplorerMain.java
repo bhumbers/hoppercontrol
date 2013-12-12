@@ -35,17 +35,22 @@ public class ExplorerMain {
 
         log.info("Starting a control exploration...");
 
-        String solutionsDir = "data/sols/";
+        String explorationName = "Columbus";
+        String autoOracleSolsDir = "data/sols2/";
+        boolean saveSols = true;
+        String saveSolsDir = "exploration/" + explorationName + "/sols/";
+        boolean saveLog = true;
+        String saveLogDir = "exploration/" + explorationName + "/";
 
         List<ProblemDefinition> problems = new ArrayList<ProblemDefinition>();
 
         //Terrain test
-        int terrainLength = 10;
+        int terrainLength = 3;
         float terrainDeltaX = 2.0f;
-        float terrainMaxAmp = 1.0f;
+        float terrainMaxAmp = 2.0f;
         Random r = new Random();
         r.setSeed(12345);
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 200; i++) {
 
             float y = 0.0f;
             List<Float> verts = new ArrayList<Float>(terrainLength);
@@ -69,31 +74,34 @@ public class ExplorerMain {
         //Test avatar
         AvatarDefinition avatarDef = new BipedHopperDefinition();
 
+        List<ChallengeOracle<BipedHopperControl>> oracles = new ArrayList<ChallengeOracle<BipedHopperControl>>();
+
         //Automated oracle
         AssociativeOracle<BipedHopperControl> autoOracle = new AssociativeOracle<BipedHopperControl>();
-        List<ProblemSolutionEntry> solutionEntries = IOUtils.instance().loadAllProblemSolutionEntriesInDir(solutionsDir);
+        List<ProblemSolutionEntry> solutionEntries = IOUtils.instance().loadAllProblemSolutionEntriesInDir(autoOracleSolsDir);
         for (ProblemSolutionEntry solutionEntry : solutionEntries)
             autoOracle.addSolutionEntry(solutionEntry.problem, solutionEntry.solution);
+        oracles.add(autoOracle);
 
         //User oracle
         UserOracle<BipedHopperControl> userOracle = new UserOracle<BipedHopperControl>();
-
-        List<ChallengeOracle<BipedHopperControl>> oracles = new ArrayList<ChallengeOracle<BipedHopperControl>>();
-        oracles.add(autoOracle);
         oracles.add(userOracle);
 
         //Test evaluation
-        EvaluatorDefinition evalDef = new BipedObstacleEvaluatorDefinition(30.0f, 20.0f, 1.0f, 5.0f);
+        float minXForSuccess = terrainLength * terrainDeltaX;
+        EvaluatorDefinition evalDef = new BipedObstacleEvaluatorDefinition(30.0f, minXForSuccess, 1.0f, 3.0f);
 
         Explorer explorer = new SimpleExplorer();
-        explorer.setSolutionsSaved(true);
-        explorer.setSolutionsSavePath(solutionsDir);
+        explorer.setSolutionsSaved(saveSols);
+        explorer.setSolutionsSavePath(saveSolsDir);
+        explorer.setLogSaved(saveLog);
+        explorer.setLogSavePath(saveLogDir);
         explorer.explore(problems, avatarDef, evalDef, oracles);
 
         log.info("Control exploration COMPLETE");
-        log.info("Problems solved:          " + explorer.getNumSolvedProblems() + "/" + explorer.getNumProblems());
-        log.info("Sim Tests used:           " + explorer.getNumTests());
-        log.info("Oracle Challenges issued: " + explorer.getNumOracleChallenges());
+        log.info("Problems Solved:          " + explorer.getNumSolvedProblems() + "/" + explorer.getNumProblems());
+        log.info("Sim Tests Used:           " + explorer.getNumTests());
+        log.info("Oracle Challenges Issued: " + explorer.getNumOracleChallenges());
         log.info("Oracle Challenges Failed: " + explorer.getNumFailedProblems());
 
         //TEST: Save solution map to files
@@ -104,5 +112,8 @@ public class ExplorerMain {
 //            IOUtils.instance().saveProblemSolutionEntry(solvedProblem, solutionsDir, filename);
 //            i++;
 //        }
+
+        for (ChallengeOracle oracle : oracles)
+            oracle.close();
     }
 }

@@ -46,13 +46,16 @@ public class AssociativeOracle<C extends Control> extends ChallengeOracle<C> {
 
     @Override
     public ControlProvider<C> solveChallenge(ProblemDefinition problemDef, AvatarDefinition avatarDef, EvaluatorDefinition evalDef) {
-        double[] problemParams = problemDef.getParamsArray();
-            if (k >= 0 && problemParams.length != k)  {
-            log.error("Bad problem given to oracle for solving, returning null. Oracle accepts problem params of size " + k +
-                    ", but given problem was of size " + problemParams.length);
-            return null;
-        }
+        if (solutionsByProblem != null) {
+            double[] problemParams = problemDef.getParamsArray();
+                if (k >= 0 && problemParams.length != k)  {
+                log.error("Bad problem given to oracle for solving, returning null. Oracle accepts problem params of size " + k +
+                        ", but given problem was of size " + problemParams.length);
+                return null;
+            }
 
-        return (ControlProvider<C>)solutionsByProblem.nearest(problemParams);
+            return (ControlProvider<C>)solutionsByProblem.nearest(problemParams);
+        }
+        return null;
     }
 }

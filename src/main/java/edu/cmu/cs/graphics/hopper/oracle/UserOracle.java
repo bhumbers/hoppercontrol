@@ -27,6 +27,8 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
     /** The problem "runner" */
     ProblemInstanceTest test;
 
+    TestbedFrame testbed;
+
     TestbedModel model;
 
         public UserOracle() {
@@ -53,7 +55,7 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
         test = new ProblemInstanceTest();
         model.addTest(test);
 
-        TestbedFrame testbed = new TestbedFrame(model, panel, TestbedController.UpdateBehavior.UPDATE_CALLED);
+        testbed = new TestbedFrame(model, panel, TestbedController.UpdateBehavior.UPDATE_CALLED);
         testbed.setSize(800, 700);
         testbed.setVisible(true);
 
@@ -108,5 +110,11 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
                 e.printStackTrace();
             }
         }
+    }
+
+    @Override
+    public void close() {
+//        if (testbed != null)
+//            testbed.dispatchEvent(new WindowEvent(testbed, WindowEve));
     }
 }
