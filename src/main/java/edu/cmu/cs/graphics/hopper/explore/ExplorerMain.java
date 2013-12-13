@@ -12,6 +12,10 @@ import edu.cmu.cs.graphics.hopper.oracle.UserOracle;
 import edu.cmu.cs.graphics.hopper.problems.ObstacleProblemDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 import edu.cmu.cs.graphics.hopper.problems.TerrainProblemDefinition;
+import org.apache.commons.cli.*;
+import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.xml.DOMConfigurator;
 import org.box2d.proto.Box2D;
 import org.jbox2d.common.Vec2;
@@ -21,10 +25,10 @@ import org.jbox2d.serialization.pb.PbSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Random;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.*;
 
 public class ExplorerMain {
 
@@ -33,27 +37,65 @@ public class ExplorerMain {
     public static void main(String[] args) {
         DOMConfigurator.configure("config/log4j.xml");
 
-        log.info("Starting a control exploration...");
+        Options options = new Options();
+        options.addOption("configFile", true, "Exploration configuration file name/path");
 
-        String explorationName = "SmartControl";
-        String autoOracleSolsDir = "data/oracles/ColumbusAutoOracleAll/";
-        boolean saveSols = true;
-        String saveSolsDir = "data/exploration/" + explorationName + "/sols/";
-        boolean saveLog = true;
-        String saveLogDir = "data/exploration/" + explorationName + "/";
+        CommandLineParser parser = new GnuParser();
+        CommandLine cmd = null;
+        try {
+            cmd = parser.parse(options, args);
+        }
+        catch (ParseException parseError) {
+            log.error("Error occurred while parsing command line inputs");
+            parseError.printStackTrace();
+            return;
+        }
+
+        String configFilePath = cmd.getOptionValue("configFile");
+        log.info("Loading config file: " + configFilePath);
+        Configuration config = null;
+        if (configFilePath != null && !configFilePath.isEmpty()) {
+            try {
+                File configFile = new File(configFilePath);
+                String fullFilePath = configFile.getAbsolutePath();
+                config = new PropertiesConfiguration(fullFilePath);
+            } catch (ConfigurationException e) {
+                log.error("Error while trying to load exploration config file: " + configFilePath);
+                e.printStackTrace();
+                return;
+            }
+        }
+        else {
+            log.error("No config file specified! Exiting... ");
+            return;
+        }
+
+        String explorationName = config.getString("explorationName");
+        String explorationOutputPath = config.getString("explorationOutputPath");
+        String autoOracleSolsPath = config.getString("autoOracleSolsPath");
+        boolean saveSols = config.getBoolean("saveSolutions");
+        boolean saveLog = config.getBoolean("saveExplorationLog");
+
+        String saveSolsDir = explorationOutputPath + explorationName + "/sols/";
+        String saveLogDir = explorationOutputPath + explorationName + "/";
+
+        int numProblems = config.getInt("numProblems");
+        int terrainSeed = config.getInt("terrainSeed");
+        int terrainLength = config.getInt("terrainLength");
+        float terrainDeltaX = config.getFloat("terrainDeltaX");
+        float terrainMaxAmp = config.getFloat("terrainMaxAmp");
+
+        log.info("Starting a control exploration named " + explorationName);
 
         List<ProblemDefinition> problems = new ArrayList<ProblemDefinition>();
 
         //Terrain test
-        int terrainLength = 5;
-        float terrainDeltaX = 2.0f;
-        float terrainMaxAmp = 3.0f;
         Random r = new Random();
-        r.setSeed(12345);
-        for (int i = 0; i < 200; i++) {
+        r.setSeed(terrainSeed);
+        for (int i = 0; i < numProblems; i++) {
             float y = 0.0f;
             List<Float> verts = new ArrayList<Float>(terrainLength);
-            verts.add(0.01f);
+            verts.add(0.0f);      //initial "ground" node
             for (int j = 0; j < terrainLength; j++) {
                 y = terrainMaxAmp*(r.nextFloat());
                 if (y < 0)
@@ -77,7 +119,7 @@ public class ExplorerMain {
 
         //Automated oracle
         AssociativeOracle<BipedHopperControl> autoOracle = new AssociativeOracle<BipedHopperControl>();
-        List<ProblemSolutionEntry> solutionEntries = IOUtils.instance().loadAllProblemSolutionEntriesInDir(autoOracleSolsDir);
+        List<ProblemSolutionEntry> solutionEntries = IOUtils.instance().loadAllProblemSolutionEntriesInDir(autoOracleSolsPath);
         for (ProblemSolutionEntry solutionEntry : solutionEntries)
             autoOracle.addSolutionEntry(solutionEntry.problem, solutionEntry.solution);
         oracles.add(autoOracle);
