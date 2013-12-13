@@ -19,9 +19,6 @@ import java.util.*;
 /** Runs automated explorations, given a problem set*/
 public abstract class Explorer<C extends Control> {
 
-    //If true, solutions from oracle are verified for correctness; if incorrect, sampled simulation is forwarded to the oracle for review
-    public static final boolean ENABLE_ORACLE_SOLUTION_VERIFICATION_REVIEW = true;
-
     private static final Logger log = LoggerFactory.getLogger(Explorer.class);
 
     protected ExplorerLog expLog;
@@ -47,6 +44,9 @@ public abstract class Explorer<C extends Control> {
     boolean logSaved = false;
     String logSavePath = "";
 
+    //If true, solutions from oracle are verified for correctness; if incorrect, sampled simulation is forwarded to the oracle for review
+    boolean verifyOracleSols = false;
+
     FileWriter logWriter;
 
     public ExplorerLog getLog() {return expLog;}
@@ -65,6 +65,8 @@ public abstract class Explorer<C extends Control> {
     public void setSolutionsSavePath(String path) { solsSavePath = path; }
     public void setLogSaved(boolean val) { logSaved = val; }
     public void setLogSavePath(String path) { logSavePath = path; }
+
+    public void setVerifyOracleSols(boolean val) { verifyOracleSols = val;}
 
     /** Runs exploration in a continuous loop until all problems are solved */
     public void explore(List<ProblemDefinition> problems, AvatarDefinition avatarDef, EvaluatorDefinition evalDef, List<ChallengeOracle<C>> oracles) {
@@ -114,6 +116,8 @@ public abstract class Explorer<C extends Control> {
 
             log.info("Attempting to solve problem #" + problemIdx);
 
+            int numTestsRunForProblem = 0;
+
             //Test control sequences until problem is solved or we give up
             boolean problemSolved = false;
             ControlProvider<C> potentialSolution = getNextControlSequence(problemDef);
@@ -121,7 +125,7 @@ public abstract class Explorer<C extends Control> {
                 ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, evalDef, potentialSolution);
                 problem.init();
                 problem.run();
-                numTests++;
+                numTests++; numTestsRunForProblem++;
                 problemSolved = (problem.getStatus() == Evaluator.Status.SUCCESS);
                 if (problemSolved)
                     break;
@@ -132,13 +136,14 @@ public abstract class Explorer<C extends Control> {
             //If solved, mark it as such
             //Otherwise, add to list of problems for oracle to solve
             if (problemSolved)    {
-                log.info("Found solution to problem #" + problemIdx);
+                log.info("Found solution to problem #" + problemIdx + " after " + numTestsRunForProblem + " test(s) run");
                 markProblemSolved(problemDef, potentialSolution);
             }
             else {
-                log.info("Unable to find solution to problem; adding to oracle challenge list  problem #" + problemIdx);
+                log.info("No solution to problem; adding problem #" + problemIdx + " to oracle challenge list after " + numTestsRunForProblem + " test(s) run");
                 unsolvedProblems.remove(problemDef);  //remove from unsolved set... oracle will solve for us (or fail trying)
                 oracleChallengeProblems.add(problemDef);
+                addLogEntry();
             }
             problemIdx++;
 
@@ -178,8 +183,8 @@ public abstract class Explorer<C extends Control> {
                 log.info("Oracle #" + oracleIdx + " returned null solution for challenge # " + oracleChallengeIdx);
                 oracleSolutionOk = false;
             }
-            //DEBUGGING: Verify that oracle solution is correct.
-            else if (ENABLE_ORACLE_SOLUTION_VERIFICATION_REVIEW) {
+            //Verify that oracle solution is correct if requested to do so
+            else if (verifyOracleSols) {
                 challengeSolution.goToFirstControl();
                 ProblemInstance problem = new ProblemInstance(challenge, avatarDef, evalDef, challengeSolution);
                 problem.setUseSampling(true); //for debugging

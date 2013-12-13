@@ -75,6 +75,7 @@ public class ExplorerMain {
         String autoOracleSolsPath = config.getString("autoOracleSolsPath");
         boolean saveSols = config.getBoolean("saveSolutions");
         boolean saveLog = config.getBoolean("saveExplorationLog");
+        boolean verifyOracleSols = config.getBoolean("verifyOracleSolutions");
 
         String saveSolsDir = explorationOutputPath + explorationName + "/sols/";
         String saveLogDir = explorationOutputPath + explorationName + "/";
@@ -132,11 +133,12 @@ public class ExplorerMain {
         float minXForSuccess = terrainLength * terrainDeltaX;
         EvaluatorDefinition evalDef = new BipedObstacleEvaluatorDefinition(30.0f, minXForSuccess, 1.0f, 3.0f);
 
-        Explorer explorer = new SmartControlExplorer();
+        Explorer explorer = new SimpleExplorer(); //TODO: Make this configurable
         explorer.setSolutionsSaved(saveSols);
         explorer.setSolutionsSavePath(saveSolsDir);
         explorer.setLogSaved(saveLog);
         explorer.setLogSavePath(saveLogDir);
+        explorer.setVerifyOracleSols(verifyOracleSols);
         explorer.explore(problems, avatarDef, evalDef, oracles);
 
         log.info("Control exploration COMPLETE");
