@@ -70,10 +70,11 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
     }
 
     @Override
-    public ControlProviderDefinition<C> solveChallenge(ProblemDefinition problemDef, AvatarDefinition avatarDef, EvaluatorDefinition evalDef) {
-        //TODO: Send problem to GUI, wait for user to complete, return provided control
+    public ControlProviderDefinition<C> solveChallenge(ProblemDefinition problemDef, AvatarDefinition avatarDef,
+                                                       EvaluatorDefinition evalDef, ControlProviderDefinition<C> suggestedControl) {
+        //Send problem to GUI, wait for user to complete, return provided control
 
-        ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, evalDef);
+        ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, evalDef, suggestedControl);
         problem.setUseSampling(true); //for debugging
 
         test.setProblem(problem);

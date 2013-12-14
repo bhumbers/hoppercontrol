@@ -46,7 +46,11 @@ public class AssociativeOracle<C extends Control> extends ChallengeOracle<C> {
     }
 
     @Override
-    public ControlProviderDefinition<C> solveChallenge(ProblemDefinition problemDef, AvatarDefinition avatarDef, EvaluatorDefinition evalDef) {
+    public ControlProviderDefinition<C> solveChallenge(ProblemDefinition problemDef, AvatarDefinition avatarDef,
+                                                       EvaluatorDefinition evalDef, ControlProviderDefinition suggestedControl) {
+
+        //Note: doesn't listen to suggested control; just uses map
+
         if (solutionsByProblem != null) {
             double[] problemParams = problemDef.getParamsArray();
                 if (k >= 0 && problemParams.length != k)  {

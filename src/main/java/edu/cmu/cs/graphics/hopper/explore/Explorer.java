@@ -227,7 +227,7 @@ public abstract class Explorer<C extends Control> {
             boolean oracleSolutionOk = true;
 
             if (challengeSolution == null) {
-                log.info("Oracle #" + oracleIdx + " returned null solution for challenge # " + oracleChallengeIdx);
+                log.info("Oracle #" + oracleIdx + " returned null solution for challenge #" + oracleChallengeIdx);
                 oracleSolutionOk = false;
             }
             //Verify that oracle solution is correct if requested to do so
@@ -237,9 +237,11 @@ public abstract class Explorer<C extends Control> {
                 problem.init();
                 problem.run();
                 if (problem.getStatus() != Evaluator.Status.SUCCESS) {
-                    log.info("Oracle #" + oracleIdx + " returned an incorrect solution to challenge # " + oracleChallengeIdx);
+                    log.info("Oracle #" + oracleIdx + " returned an incorrect solution to challenge #" + oracleChallengeIdx);
                     oracleSolutionOk = false;
-//                    oracle.sendForReview(problem);
+
+                    //HACK: Send for user review, assuming second oracle is user GUI
+//                    oracles.get(1).solveChallenge(challenge, avatarDef, evalDef, challengeSolution);
                 }
             }
 
