@@ -155,8 +155,11 @@ public class ExplorerMain {
         }
 
         //Test evaluation
+        float maxTime = 15.0f;
         float minXForSuccess = terrainLength * terrainDeltaX;
-        EvaluatorDefinition evalDef = new BipedObstacleEvaluatorDefinition(30.0f, minXForSuccess, 1.0f, 3.0f);
+        float maxUprightDeviation = 1.0f;
+        float minConsecutiveUprightTimeAfterMinXReached = 3.0f;
+        EvaluatorDefinition evalDef = new BipedObstacleEvaluatorDefinition(maxTime, minXForSuccess, maxUprightDeviation, minConsecutiveUprightTimeAfterMinXReached);
 
         Explorer explorer;
         if (useSmartControlOrdering)
