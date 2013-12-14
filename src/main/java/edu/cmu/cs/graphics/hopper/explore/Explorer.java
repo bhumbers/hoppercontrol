@@ -63,7 +63,7 @@ public abstract class Explorer<C extends Control> {
     public int getNumTests() {return numTests;}
     public int getNumOracleChallenges() {return numOracleChallenges;}
 
-    public int getNumProblems() {return getNumSolvedProblems() + getNumUnsolvedProblems();}
+    public int getNumProblems() {return getNumSolvedProblems() + getNumUnsolvedProblems() + getNumFailedProblems();}
     public int getNumUnsolvedProblems() {return unsolvedProblems.size();}
     public int getNumSolvedProblems() {return solvedProblems.size();}
     public int getNumFailedProblems() {return failedProblems.size();}
