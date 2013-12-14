@@ -5,13 +5,16 @@ import edu.cmu.cs.graphics.hopper.control.Control;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
 import edu.cmu.cs.graphics.hopper.control.ControlProviderDefinition;
 import edu.cmu.cs.graphics.hopper.eval.EvaluatorDefinition;
+import edu.cmu.cs.graphics.hopper.explore.ProblemSolutionEntry;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 
 import net.sf.javaml.core.kdtree.KDTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /** An oracle which has a predefined association between problems & solutions. Returns null solutions if not present in associative set.
@@ -23,8 +26,12 @@ public class AssociativeOracle<C extends Control> extends ChallengeOracle<C> {
     KDTree solutionsByProblem;
     int k; //size of k for kd tree
 
+    //The full list of problem-solution entries for this map (also in KD tree, but list is useful for debug viewing)
+    List<ProblemSolutionEntry> solutionsList;
+
     public AssociativeOracle() {
         solutionsByProblem = null; //wait until first entry is added to determine k for tree
+        solutionsList = new ArrayList<ProblemSolutionEntry>();
         k = -1;
     }
 
@@ -43,6 +50,7 @@ public class AssociativeOracle<C extends Control> extends ChallengeOracle<C> {
         }
 
         solutionsByProblem.insert(problemParams, solution);
+        solutionsList.add(new ProblemSolutionEntry(problem, solution));
     }
 
     @Override
@@ -59,7 +67,8 @@ public class AssociativeOracle<C extends Control> extends ChallengeOracle<C> {
                 return null;
             }
 
-            return (ControlProviderDefinition<C>)solutionsByProblem.search(problemParams);
+            ControlProviderDefinition<C> solution = (ControlProviderDefinition<C>)solutionsByProblem.search(problemParams);
+            return solution;
         }
         return null;
     }
