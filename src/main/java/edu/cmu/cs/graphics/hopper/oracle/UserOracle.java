@@ -4,6 +4,7 @@ import edu.cmu.cs.graphics.hopper.TestbedFrame;
 import edu.cmu.cs.graphics.hopper.control.AvatarDefinition;
 import edu.cmu.cs.graphics.hopper.control.Control;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
+import edu.cmu.cs.graphics.hopper.control.ControlProviderDefinition;
 import edu.cmu.cs.graphics.hopper.edu.cmu.cs.graphics.hopper.tests.ProblemInstanceTest;
 import edu.cmu.cs.graphics.hopper.eval.Evaluator;
 import edu.cmu.cs.graphics.hopper.eval.EvaluatorDefinition;
@@ -69,7 +70,7 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
     }
 
     @Override
-    public ControlProvider<C> solveChallenge(ProblemDefinition problemDef, AvatarDefinition avatarDef, EvaluatorDefinition evalDef) {
+    public ControlProviderDefinition<C> solveChallenge(ProblemDefinition problemDef, AvatarDefinition avatarDef, EvaluatorDefinition evalDef) {
         //TODO: Send problem to GUI, wait for user to complete, return provided control
 
         ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, evalDef);
@@ -91,7 +92,7 @@ public class UserOracle<C extends Control> extends ChallengeOracle<C>{
         //Clear the problem once completed
         test.setProblem(null);
 
-        return problem.getCtrlProvider();
+        return problem.getCtrlProvider().toDefinition();
     }
 
     @Override

@@ -1,6 +1,7 @@
 package edu.cmu.cs.graphics.hopper.control;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /** Provides a sequence of control values as requested by some avatar
@@ -14,6 +15,11 @@ public class ControlProvider<C extends Control> {
         controls = new ArrayList<C>();
         currControlIdx = 0;
         specifyControlForIndex(initControl, 0);
+    }
+
+    public ControlProvider() {
+        controls = new ArrayList<C>();
+        currControlIdx = 0;
     }
 
     public int CurrControlIdx() {return currControlIdx;}
@@ -87,5 +93,35 @@ public class ControlProvider<C extends Control> {
         for (int i = 0; i < this.controls.size(); i++)
             dup.controls.add((C)this.controls.get(i).duplicate());
         return dup;
+    }
+
+    public float[] toNumericArray() {
+        float[] vals = null;
+
+        //NOTE: We're going to assume that the numeric array output of all controls in the list are of equal length
+        //Gets a bit tricky to unpack, otherwise...
+
+        //Get vals for each control and copy to the array for the complete sequence
+        int numValsPerControl = -1;
+        for (int i = 0; i < this.controls.size(); i++) {
+            float[] controlVals = this.controls.get(i).toNumericArray();
+            if (i == 0) {
+                numValsPerControl = controlVals.length;
+                vals = new float[controls.size() * numValsPerControl];
+            }
+            System.arraycopy(controlVals, 0, vals, i*numValsPerControl, controlVals.length);
+        }
+
+        //If nothing is in the array yet, just make a null one
+        if (vals == null)
+            vals = new float[0];
+
+        return vals;
+    }
+
+    /** Returns an immutable definition of this provider based on current values */
+    public ControlProviderDefinition toDefinition() {
+        ControlProviderDefinition controlDef = new ControlProviderDefinition(this.controls);
+        return controlDef;
     }
 }

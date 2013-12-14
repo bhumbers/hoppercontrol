@@ -1,9 +1,6 @@
 package edu.cmu.cs.graphics.hopper.problems;
 
-import edu.cmu.cs.graphics.hopper.control.Avatar;
-import edu.cmu.cs.graphics.hopper.control.AvatarDefinition;
-import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
-import edu.cmu.cs.graphics.hopper.control.ControlProvider;
+import edu.cmu.cs.graphics.hopper.control.*;
 import edu.cmu.cs.graphics.hopper.eval.Evaluator;
 import edu.cmu.cs.graphics.hopper.eval.EvaluatorDefinition;
 import org.box2d.proto.Box2D;
@@ -53,6 +50,7 @@ public class ProblemInstance implements
     final AvatarDefinition avatarDef;
     final ProblemDefinition problemDef;
     final EvaluatorDefinition evalDef;
+    final ControlProviderDefinition ctrlDef;
 
     //Dynamic runtime stuff
     protected World world;
@@ -85,11 +83,12 @@ public class ProblemInstance implements
     }
 
     /** Creates a new problem instance where avatar will use given control provider */
-    public ProblemInstance(ProblemDefinition problemDef, AvatarDefinition avatarDef, EvaluatorDefinition evalDef, ControlProvider ctrlProvider) {
+    public ProblemInstance(ProblemDefinition problemDef, AvatarDefinition avatarDef,
+                           EvaluatorDefinition evalDef, ControlProviderDefinition ctrlDef) {
         this.problemDef = problemDef;
         this.avatarDef = avatarDef;
         this.evalDef = evalDef;
-        this.givenCtrlProvider = ctrlProvider;
+        this.ctrlDef = ctrlDef;
 
         currContacts = new ArrayList<Contact>();
 
@@ -154,8 +153,8 @@ public class ProblemInstance implements
             avatar = avatarDef.create();
 
             //If given a specific provider, use it
-            if (givenCtrlProvider != null)
-                avatar.setControlProvider(givenCtrlProvider);
+            if (ctrlDef != null)
+                avatar.setControlProvider(ctrlDef.create());
 
             //TODO: move this to problem or avatar def... just useful to hardcode for now
             final float INIT_VEL_X = 1.5f;

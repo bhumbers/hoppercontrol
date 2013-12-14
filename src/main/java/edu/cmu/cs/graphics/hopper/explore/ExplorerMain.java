@@ -4,6 +4,8 @@ import edu.cmu.cs.graphics.hopper.control.AvatarDefinition;
 import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
 import edu.cmu.cs.graphics.hopper.control.BipedHopperDefinition;
 import edu.cmu.cs.graphics.hopper.eval.BipedObstacleEvaluatorDefinition;
+import edu.cmu.cs.graphics.hopper.eval.EvalCache;
+import edu.cmu.cs.graphics.hopper.eval.EvalCacheEntry;
 import edu.cmu.cs.graphics.hopper.eval.EvaluatorDefinition;
 import edu.cmu.cs.graphics.hopper.io.IOUtils;
 import edu.cmu.cs.graphics.hopper.oracle.AssociativeOracle;
@@ -29,6 +31,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class ExplorerMain {
 
@@ -76,9 +79,19 @@ public class ExplorerMain {
         boolean saveSols = config.getBoolean("saveSolutions");
         boolean saveLog = config.getBoolean("saveExplorationLog");
         boolean verifyOracleSols = config.getBoolean("verifyOracleSolutions");
+        boolean saveEvals = config.getBoolean("saveEvals");
+        int maxTestsPerProblem = config.getInt("maxTestsPerProblem");
+
+        boolean useEvalCache = config.getBoolean("useEvalCache");
+        String evalCachePath = config.getString("evalCachePath");
+
+        boolean useSmartControlOrdering = config.getBoolean("useSmartControlOrdering");
+
+        boolean enableUserOracle = config.getBoolean("enableUserOracle");
 
         String saveSolsDir = explorationOutputPath + explorationName + "/sols/";
         String saveLogDir = explorationOutputPath + explorationName + "/";
+        String saveEvalsDir = explorationOutputPath + explorationName + "/evals/";
 
         int numProblems = config.getInt("numProblems");
         int terrainSeed = config.getInt("terrainSeed");
@@ -87,6 +100,7 @@ public class ExplorerMain {
         float terrainMaxAmp = config.getFloat("terrainMaxAmp");
 
         log.info("Starting a control exploration named " + explorationName);
+        long t0 = System.currentTimeMillis();
 
         List<ProblemDefinition> problems = new ArrayList<ProblemDefinition>();
 
@@ -116,6 +130,15 @@ public class ExplorerMain {
         //Test avatar
         AvatarDefinition avatarDef = new BipedHopperDefinition();
 
+        //Evaluation cache setup
+        EvalCache evalCache = null;
+        if (useEvalCache) {
+            evalCache = new EvalCache();
+            List<EvalCacheEntry> evalCacheEntries = IOUtils.instance().loadAllEvalCacheEntriesInDir(evalCachePath);
+            for (EvalCacheEntry entry : evalCacheEntries)
+                evalCache.insert(entry.key, entry.value);
+        }
+
         List<ChallengeOracle<BipedHopperControl>> oracles = new ArrayList<ChallengeOracle<BipedHopperControl>>();
 
         //Automated oracle
@@ -126,22 +149,41 @@ public class ExplorerMain {
         oracles.add(autoOracle);
 
         //User oracle
-        UserOracle<BipedHopperControl> userOracle = new UserOracle<BipedHopperControl>();
-        oracles.add(userOracle);
+        if (enableUserOracle) {
+            UserOracle<BipedHopperControl> userOracle = new UserOracle<BipedHopperControl>();
+            oracles.add(userOracle);
+        }
 
         //Test evaluation
         float minXForSuccess = terrainLength * terrainDeltaX;
         EvaluatorDefinition evalDef = new BipedObstacleEvaluatorDefinition(30.0f, minXForSuccess, 1.0f, 3.0f);
 
-        Explorer explorer = new SimpleExplorer(); //TODO: Make this configurable
+        Explorer explorer;
+        if (useSmartControlOrdering)
+            explorer = new SimpleExplorer();
+        else
+            explorer = new SimpleExplorer();
+        explorer.setName(explorationName);
         explorer.setSolutionsSaved(saveSols);
         explorer.setSolutionsSavePath(saveSolsDir);
         explorer.setLogSaved(saveLog);
         explorer.setLogSavePath(saveLogDir);
+        explorer.setEvalsSaved(saveEvals);
+        explorer.setEvalsSavePath(saveEvalsDir);
         explorer.setVerifyOracleSols(verifyOracleSols);
+        explorer.setMaxTestsPerProblem(maxTestsPerProblem);
+        if (evalCache != null) explorer.setEvalCache(evalCache);
+
         explorer.explore(problems, avatarDef, evalDef, oracles);
 
+        long t1 = System.currentTimeMillis();
+        long explorationRuntime = (t1 - t0);
+        String runtimeStr = String.format("%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(explorationRuntime),
+                TimeUnit.MILLISECONDS.toMinutes(explorationRuntime) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(explorationRuntime)),
+                TimeUnit.MILLISECONDS.toSeconds(explorationRuntime) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(explorationRuntime)));
+
         log.info("Control exploration COMPLETE");
+        log.info("Runtime: " + runtimeStr);
         log.info("Problems Solved:          " + explorer.getNumSolvedProblems() + "/" + explorer.getNumProblems());
         log.info("Sim Tests Used:           " + explorer.getNumTests());
         log.info("Oracle Challenges Issued: " + explorer.getNumOracleChallenges());

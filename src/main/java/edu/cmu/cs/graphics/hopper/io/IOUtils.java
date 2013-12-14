@@ -5,6 +5,11 @@ import com.thoughtworks.xstream.io.xml.DomDriver;
 import com.thoughtworks.xstream.io.xml.StaxDriver;
 import edu.cmu.cs.graphics.hopper.control.BipedHopperControl;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
+import edu.cmu.cs.graphics.hopper.control.ControlProviderDefinition;
+import edu.cmu.cs.graphics.hopper.eval.EvalCacheEntry;
+import edu.cmu.cs.graphics.hopper.eval.EvalCacheKey;
+import edu.cmu.cs.graphics.hopper.eval.EvalCacheValue;
+import edu.cmu.cs.graphics.hopper.eval.Evaluator;
 import edu.cmu.cs.graphics.hopper.explore.Explorer;
 import edu.cmu.cs.graphics.hopper.explore.ProblemSolutionEntry;
 import edu.cmu.cs.graphics.hopper.problems.ObstacleProblemDefinition;
@@ -35,12 +40,18 @@ public class IOUtils {
     private IOUtils() {
         xstream = new XStream(new StaxDriver());
         xstream.alias("CtrlProvider", ControlProvider.class);
-        xstream.omitField(ControlProvider.class, "currControlIdx");
+        xstream.alias("CtrlProviderDef", ControlProviderDefinition.class);
+//        xstream.omitField(ControlProvider.class, "currControlIdx");
         xstream.alias("BipedCtrl", BipedHopperControl.class);
         xstream.alias("ProbSolEntry", ProblemSolutionEntry.class);
 
         xstream.alias("TerrainProbDef", TerrainProblemDefinition.class);
         xstream.alias("ObsProbDef", ObstacleProblemDefinition.class);
+
+        xstream.alias("EvalCacheEntry", EvalCacheEntry.class);
+        xstream.alias("key", EvalCacheKey.class);
+        xstream.alias("value", EvalCacheValue.class);
+        xstream.alias("status", Evaluator.Status.class);
     }
 
     public void ensurePathExists(String path) {
@@ -54,7 +65,6 @@ public class IOUtils {
                 logStackTraceError(e);
             }
         }
-
     }
 
     public void saveProblemSolutionEntry(ProblemSolutionEntry entry, String path, String filename) {
@@ -86,6 +96,48 @@ public class IOUtils {
         }
         catch (Exception error) {
             log.error("Problem occurred reading problem solution entry for file " + filename);
+            logStackTraceError(error);
+        }
+        finally {
+            try {fileReader.close();}
+            catch (Exception error) {
+                log.error("Problem occurred while closing file " + filename);
+                logStackTraceError(error);
+            }
+        }
+
+        return entry;
+    }
+
+    public void saveEvalCacheEntry(EvalCacheEntry entry, String path, String filename) {
+        String entryXML = xstream.toXML(entry);
+        saveToFile(entryXML, path, filename);
+    }
+
+    public List<EvalCacheEntry> loadAllEvalCacheEntriesInDir(String path) {
+        File[] files = new File(path).listFiles(new FilenameFilter() {
+            public boolean accept(File dir, String name) {
+                return name.toLowerCase().endsWith(".ech");
+            }
+        });
+
+        List<EvalCacheEntry> entries = new ArrayList<EvalCacheEntry>();
+        if (files != null) {
+            for (File file : files)
+                entries.add(this.loadEvalCacheEntry(path, file.getName()));
+        }
+        return entries;
+    }
+
+    public EvalCacheEntry loadEvalCacheEntry(String path, String filename) {
+        EvalCacheEntry entry = null;
+        FileReader fileReader = null;
+        try {
+            fileReader = new FileReader(path + filename);
+            entry = (EvalCacheEntry)xstream.fromXML(fileReader);
+        }
+        catch (Exception error) {
+            log.error("Problem occurred reading eval cache entry for file " + filename);
             logStackTraceError(error);
         }
         finally {

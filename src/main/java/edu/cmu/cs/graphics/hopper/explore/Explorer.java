@@ -3,8 +3,8 @@ package edu.cmu.cs.graphics.hopper.explore;
 import edu.cmu.cs.graphics.hopper.control.AvatarDefinition;
 import edu.cmu.cs.graphics.hopper.control.Control;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
-import edu.cmu.cs.graphics.hopper.eval.Evaluator;
-import edu.cmu.cs.graphics.hopper.eval.EvaluatorDefinition;
+import edu.cmu.cs.graphics.hopper.control.ControlProviderDefinition;
+import edu.cmu.cs.graphics.hopper.eval.*;
 import edu.cmu.cs.graphics.hopper.io.IOUtils;
 import edu.cmu.cs.graphics.hopper.oracle.ChallengeOracle;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
@@ -22,9 +22,12 @@ public abstract class Explorer<C extends Control> {
     private static final Logger log = LoggerFactory.getLogger(Explorer.class);
 
     protected ExplorerLog expLog;
+    protected EvalCache evalCache = null;
 
     protected int numTests;
     protected int numOracleChallenges;
+
+    String explorationName;
 
     //Oracles consulted for challenge problems. Challenges are presented to oracles in successive
     //order of this list until some Oracle solves it.
@@ -44,8 +47,14 @@ public abstract class Explorer<C extends Control> {
     boolean logSaved = false;
     String logSavePath = "";
 
+    boolean evalsSaved = false;
+    String evalsSavePath = "";
+
     //If true, solutions from oracle are verified for correctness; if incorrect, sampled simulation is forwarded to the oracle for review
     boolean verifyOracleSols = false;
+
+    //Max control tests run on a problem before we give up and hand it to the oracles (arbitrarily high if == -1)
+    int maxTestsPerProblem = -1;
 
     FileWriter logWriter;
 
@@ -61,12 +70,20 @@ public abstract class Explorer<C extends Control> {
 
     public Collection<ProblemSolutionEntry> getSolvedProblems() {return solvedProblems;}
 
+    public void setName(String val) {explorationName = val;}
+
     public void setSolutionsSaved(boolean val) { solsSaved = val; }
     public void setSolutionsSavePath(String path) { solsSavePath = path; }
     public void setLogSaved(boolean val) { logSaved = val; }
     public void setLogSavePath(String path) { logSavePath = path; }
+    public void setEvalsSaved(boolean val) {evalsSaved = val;}
+    public void setEvalsSavePath(String path) { evalsSavePath = path; }
+
+    public void setMaxTestsPerProblem(int val) {maxTestsPerProblem = val;}
 
     public void setVerifyOracleSols(boolean val) { verifyOracleSols = val;}
+
+    public void setEvalCache(EvalCache val) {evalCache = val;}
 
     /** Runs exploration in a continuous loop until all problems are solved */
     public void explore(List<ProblemDefinition> problems, AvatarDefinition avatarDef, EvaluatorDefinition evalDef, List<ChallengeOracle<C>> oracles) {
@@ -80,7 +97,7 @@ public abstract class Explorer<C extends Control> {
         if (logSaved) {
             IOUtils.instance().ensurePathExists(logSavePath);
             try {
-                logWriter = new FileWriter(logSavePath + "exploration_log.csv");
+                logWriter = new FileWriter(logSavePath + explorationName + "_ExpLog.csv");
                 logWriter.write(expLog.getCSVHeader());
                 logWriter.flush();
             }
@@ -88,6 +105,9 @@ public abstract class Explorer<C extends Control> {
                 log.error("Error creating file path: " + logSavePath);
             }
         }
+
+        if (evalsSaved)
+            IOUtils.instance().ensurePathExists(evalsSavePath);
 
         numTests = 0;
         numOracleChallenges = 0;
@@ -120,13 +140,45 @@ public abstract class Explorer<C extends Control> {
 
             //Test control sequences until problem is solved or we give up
             boolean problemSolved = false;
-            ControlProvider<C> potentialSolution = getNextControlSequence(problemDef);
-            while (potentialSolution != null) {
-                ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, evalDef, potentialSolution);
-                problem.init();
-                problem.run();
+            ControlProviderDefinition<C> potentialSolution = getNextControlSequence(problemDef);
+            while (potentialSolution != null && (maxTestsPerProblem < 0 || numTestsRunForProblem < maxTestsPerProblem)) {
+                //If configured to do so, try to use a cached eval first
+                Evaluator.Status evalResult = Evaluator.Status.RUNNING;
+                boolean foundCachedEval = false;
+                if (evalCache != null) {
+                    EvalCacheValue evalValue = evalCache.getCachedEvaluation(problemDef, potentialSolution);
+                    if (evalValue != null) {
+                        evalResult = evalValue.status;
+                        foundCachedEval = true;
+                    }
+                }
+
+                //Otherwise, or if no cached sol found, do a true sim eval on the problem
+                if (!foundCachedEval) {
+//                    long t0 = System.currentTimeMillis();
+                    ProblemInstance problem = new ProblemInstance(problemDef, avatarDef, evalDef, potentialSolution);
+                    problem.init();
+                    problem.run();
+                    evalResult = problem.getStatus();
+//                    long t1 = System.currentTimeMillis();
+//                    log.info("EVAL RUN TEST: " + (t1 - t0));
+                }
+
+                //If configured to do so, save the evaluation result
+                if (evalsSaved) {
+                    int evalNum = numTests;
+                    EvalCacheKey key = new EvalCacheKey(problemDef, potentialSolution);
+                    int evalKeyHash = key.hashCode();
+                    String filename = String.format("%h", evalKeyHash) + ".ech";
+                    log.info("Saving eval to disk: " + filename);
+                    IOUtils.instance().saveEvalCacheEntry(
+                            new EvalCacheEntry(new EvalCacheKey(problemDef, potentialSolution),new EvalCacheValue(evalResult)),
+                            evalsSavePath, filename);
+                }
+
                 numTests++; numTestsRunForProblem++;
-                problemSolved = (problem.getStatus() == Evaluator.Status.SUCCESS);
+
+                problemSolved = (evalResult == Evaluator.Status.SUCCESS);
                 if (problemSolved)
                     break;
                 else
@@ -166,16 +218,11 @@ public abstract class Explorer<C extends Control> {
     protected void sendChallengeToOracles(ProblemDefinition challenge) {
         int oracleChallengeIdx = numOracleChallenges;
         log.info("Sending challenge #" + oracleChallengeIdx + " to oracles");
-        numOracleChallenges++;
-
 
         boolean challengeSolFound = false;
         for (int oracleIdx = 0; oracleIdx < oracles.size(); oracleIdx++) {
             ChallengeOracle<C> oracle = oracles.get(oracleIdx);
-            ControlProvider<C> challengeSolution = oracle.solveChallenge(challenge, avatarDef, evalDef);
-
-            //TEST: Use a safe copy of the solution
-            //                challengeSolution = challengeSolution.duplicate();
+            ControlProviderDefinition<C> challengeSolution = oracle.solveChallenge(challenge, avatarDef, evalDef);
 
             boolean oracleSolutionOk = true;
 
@@ -185,7 +232,6 @@ public abstract class Explorer<C extends Control> {
             }
             //Verify that oracle solution is correct if requested to do so
             else if (verifyOracleSols) {
-                challengeSolution.goToFirstControl();
                 ProblemInstance problem = new ProblemInstance(challenge, avatarDef, evalDef, challengeSolution);
                 problem.setUseSampling(true); //for debugging
                 problem.init();
@@ -210,9 +256,11 @@ public abstract class Explorer<C extends Control> {
         if (challengeSolFound == false) {
             markProblemFailed(challenge);
         }
+
+        numOracleChallenges++;
     }
 
-    private void markProblemSolved(ProblemDefinition problem, ControlProvider<C> solution) {
+    private void markProblemSolved(ProblemDefinition problem, ControlProviderDefinition<C> solution) {
         //NOTE: If we're marking it solved, it will currently be either in either unsolved set or oracle challenge set
         //For simplicity, just be sure it's removed from both
         unsolvedProblems.remove(problem);
@@ -222,7 +270,7 @@ public abstract class Explorer<C extends Control> {
         if (solsSaved) {
             int solNum = solvedProblems.size();
             String filename = String.format("%05d", solNum) + ".sol";
-            log.info("Saving solution to disk...");
+            log.info("Saving solution to disk: " + filename);
             IOUtils.instance().saveProblemSolutionEntry(new ProblemSolutionEntry(problem, solution), solsSavePath, filename);
         }
 
@@ -270,12 +318,12 @@ public abstract class Explorer<C extends Control> {
 
     /** Returns what this explorer believes is the most useful control provider (ie: sequence) to test next on given problem,
      * or null if the explorer wishes to give up on the problem and hand it to the oracle for solution. */
-    protected abstract ControlProvider<C> getNextControlSequence(ProblemDefinition p);
+    protected abstract ControlProviderDefinition<C> getNextControlSequence(ProblemDefinition p);
 
     /** Returns the next most useful problem to send to user/oracle challenge for this explorer, or null
      * if this explorer currently does not wish to send a problem to the oracle */
     protected abstract ProblemDefinition getNextChallengeProblem();
 
     /** Runs any additional logic (aside from marking a problem solved) for when a new challenge solution is provided */
-    protected void onChallengeSolutionGiven(ProblemDefinition challenge, ControlProvider<C> challengeSolution) {}
+    protected void onChallengeSolutionGiven(ProblemDefinition challenge, ControlProviderDefinition<C> challengeSolution) {}
 }

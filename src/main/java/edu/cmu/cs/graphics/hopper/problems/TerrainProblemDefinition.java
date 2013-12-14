@@ -68,4 +68,24 @@ public final class TerrainProblemDefinition extends ProblemDefinition {
             params[i++] = peakXDelta;
         return params;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        TerrainProblemDefinition that = (TerrainProblemDefinition) o;
+
+        if (!heights.equals(that.heights)) return false;
+        if (!peakXDeltas.equals(that.peakXDeltas)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = heights.hashCode();
+        result = 31 * result + peakXDeltas.hashCode();
+        return result;
+    }
 }

@@ -1,0 +1,4 @@
+%Histogram of # tests run per problem solved
+[~, uniqueSolveLogIndices, ~] = unique(NumSolved)
+plot(NumTests(uniqueSolveLogIndices), NumTests(uniqueSolveLogIndices))
+% hist(diff(NumTests(uniqueSolveLogIndices)))

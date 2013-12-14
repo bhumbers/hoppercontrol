@@ -2,6 +2,7 @@ package edu.cmu.cs.graphics.hopper.explore;
 
 import edu.cmu.cs.graphics.hopper.control.Control;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
+import edu.cmu.cs.graphics.hopper.control.ControlProviderDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 import net.sf.javaml.core.kdtree.KDTree;
 
@@ -16,7 +17,7 @@ public class SmartControlExplorer<C extends Control> extends Explorer<C> {
     int numControlsByProblem;
 
     //Ordered list of controls to attempt for current problem
-    List<ControlProvider<C>> sequencesToTryForProblem;
+    List<ControlProviderDefinition<C>> sequencesToTryForProblem;
     int nextControlSequenceIdx;
 
     @Override
@@ -26,7 +27,7 @@ public class SmartControlExplorer<C extends Control> extends Explorer<C> {
     @Override
     protected void prepareForProblem(ProblemDefinition problemDef) {
         if (sequencesToTryForProblem == null)
-            sequencesToTryForProblem = new ArrayList<ControlProvider<C>>();
+            sequencesToTryForProblem = new ArrayList<ControlProviderDefinition<C>>();
 
         nextControlSequenceIdx = 0;
         sequencesToTryForProblem.clear();
@@ -36,7 +37,7 @@ public class SmartControlExplorer<C extends Control> extends Explorer<C> {
         if (controlsByProblem != null) {
             Object[] orderedControls = controlsByProblem.nearest(problemParams, numControlsByProblem);
             for (Object orderedControl : orderedControls)
-                sequencesToTryForProblem.add((ControlProvider<C>)orderedControl);
+                sequencesToTryForProblem.add((ControlProviderDefinition<C>)orderedControl);
         }
     }
 
@@ -48,9 +49,9 @@ public class SmartControlExplorer<C extends Control> extends Explorer<C> {
     }
 
     @Override
-    protected ControlProvider<C> getNextControlSequence(ProblemDefinition p) {
+    protected ControlProviderDefinition<C> getNextControlSequence(ProblemDefinition p) {
         //Return next item in list
-        ControlProvider<C> provider = null;
+        ControlProviderDefinition<C> provider = null;
         if (nextControlSequenceIdx <= sequencesToTryForProblem.size() - 1) {
             provider = sequencesToTryForProblem.get(nextControlSequenceIdx);
             nextControlSequenceIdx++;
@@ -67,7 +68,7 @@ public class SmartControlExplorer<C extends Control> extends Explorer<C> {
     }
 
     @Override
-    protected void onChallengeSolutionGiven(ProblemDefinition challenge, ControlProvider<C> challengeSolution) {
+    protected void onChallengeSolutionGiven(ProblemDefinition challenge, ControlProviderDefinition<C> challengeSolution) {
         double[] problemParams = challenge.getParamsArray();
         if (controlsByProblem == null) {
             int k = problemParams.length;

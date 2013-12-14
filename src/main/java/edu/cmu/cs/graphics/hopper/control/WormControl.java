@@ -1,6 +1,7 @@
 package edu.cmu.cs.graphics.hopper.control;
 
 import java.text.DecimalFormat;
+import java.util.Arrays;
 
 /** Control specific to a Worm avatar */
 public class WormControl extends Control {
@@ -15,18 +16,24 @@ public class WormControl extends Control {
 
     @Override
     public Control duplicate() {
-        int numLinks = targetLinkAngles.length;
+        int numLinks = this.targetLinkAngles.length;
         WormControl copy = new WormControl(numLinks);
-        System.arraycopy(this.targetLinkAngles, 0, copy.targetLinkAngles, 0, numLinks);
+        copy.fillFromNumericArray(this.toNumericArray());
         return copy;
     }
 
     @Override
-    public Control fromNumericArray(float[] vals) {
+    public void fillFromNumericArray(float[] vals) {
         int numLinks = vals.length;
-        WormControl control = new WormControl(numLinks);
-        System.arraycopy(vals, 0, control.targetLinkAngles, 0, vals.length);
-        return control;
+        System.arraycopy(vals, 0, this.targetLinkAngles, 0, vals.length);
+    }
+
+    @Override
+    public float[] toNumericArray() {
+        float[] vals = new float[this.targetLinkAngles.length];
+        int valIdx = 0;
+        System.arraycopy(this.targetLinkAngles, 0, vals, 0, vals.length);
+        return vals;
     }
 
     @Override
@@ -36,5 +43,22 @@ public class WormControl extends Control {
             str += strFormat.format(targetLinkAngle) + " ";
         }
         return str;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        WormControl that = (WormControl) o;
+
+        if (!Arrays.equals(targetLinkAngles, that.targetLinkAngles)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(targetLinkAngles);
     }
 }

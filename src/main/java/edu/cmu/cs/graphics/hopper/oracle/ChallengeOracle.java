@@ -3,6 +3,7 @@ package edu.cmu.cs.graphics.hopper.oracle;
 import edu.cmu.cs.graphics.hopper.control.AvatarDefinition;
 import edu.cmu.cs.graphics.hopper.control.Control;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
+import edu.cmu.cs.graphics.hopper.control.ControlProviderDefinition;
 import edu.cmu.cs.graphics.hopper.eval.EvaluatorDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemInstance;
@@ -13,7 +14,7 @@ public abstract class ChallengeOracle<C extends Control> {
 
     /**Given a particular problem and evaluation method, returns a control sequence which is guaranteed to solve that problem, or null if the oracle
      * is unable to provide a solution to the problem (egad!) */
-    public abstract ControlProvider<C> solveChallenge(ProblemDefinition problemDef, AvatarDefinition avatarDef, EvaluatorDefinition evalDef);
+    public abstract ControlProviderDefinition<C> solveChallenge(ProblemDefinition problemDef, AvatarDefinition avatarDef, EvaluatorDefinition evalDef);
 
     /** Sends a problem instance that was already simulated (usually with sampling)
      * to this oracle so it may "review" it (ie: let the user view it)

@@ -28,24 +28,56 @@ public class BipedHopperControl extends Control {
     @Override
     public Control duplicate() {
         BipedHopperControl copy = new BipedHopperControl();
-        copy.activeThrustDelta = this.activeThrustDelta;
-        copy.idleThrustDelta = this.idleThrustDelta;
-        copy.targetBodyVelX = this.targetBodyVelX;
-        copy.targetBodyPitch = this.targetBodyPitch;
-        copy.targetBodyVelXLegPlacementGain = targetBodyVelXLegPlacementGain;
+        copy.fillFromNumericArray(this.toNumericArray());
         return copy;
     }
 
     @Override
-    public Control fromNumericArray(float[] vals) {
-        BipedHopperControl control = new BipedHopperControl();
+    public void fillFromNumericArray(float[] vals) {
         int valIdx = 0;
-        control.activeThrustDelta = vals[valIdx++];
-        control.idleThrustDelta = vals[valIdx++];
-        control.targetBodyVelX = vals[valIdx++];
-        control.targetBodyPitch = vals[valIdx++];
-        control.targetBodyVelXLegPlacementGain = vals[valIdx++];
-        return control;
+        this.activeThrustDelta = vals[valIdx++];
+        this.idleThrustDelta = vals[valIdx++];
+        this.targetBodyVelX = vals[valIdx++];
+        this.targetBodyPitch = vals[valIdx++];
+        this.targetBodyVelXLegPlacementGain = vals[valIdx++];
+    }
+
+    @Override
+    public float[] toNumericArray() {
+        float[] vals = new float[5];
+        int valIdx = 0;
+        vals[valIdx++] = this.activeThrustDelta;
+        vals[valIdx++] = this.idleThrustDelta;
+        vals[valIdx++] = this.targetBodyVelX;
+        vals[valIdx++] = this.targetBodyPitch;
+        vals[valIdx++] = this.targetBodyVelXLegPlacementGain;
+        return vals;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        BipedHopperControl that = (BipedHopperControl) o;
+
+        if (Float.compare(that.activeThrustDelta, activeThrustDelta) != 0) return false;
+        if (Float.compare(that.idleThrustDelta, idleThrustDelta) != 0) return false;
+        if (Float.compare(that.targetBodyPitch, targetBodyPitch) != 0) return false;
+        if (Float.compare(that.targetBodyVelX, targetBodyVelX) != 0) return false;
+        if (Float.compare(that.targetBodyVelXLegPlacementGain, targetBodyVelXLegPlacementGain) != 0) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (activeThrustDelta != +0.0f ? Float.floatToIntBits(activeThrustDelta) : 0);
+        result = 31 * result + (idleThrustDelta != +0.0f ? Float.floatToIntBits(idleThrustDelta) : 0);
+        result = 31 * result + (targetBodyVelX != +0.0f ? Float.floatToIntBits(targetBodyVelX) : 0);
+        result = 31 * result + (targetBodyPitch != +0.0f ? Float.floatToIntBits(targetBodyPitch) : 0);
+        result = 31 * result + (targetBodyVelXLegPlacementGain != +0.0f ? Float.floatToIntBits(targetBodyVelXLegPlacementGain) : 0);
+        return result;
     }
 
     @Override

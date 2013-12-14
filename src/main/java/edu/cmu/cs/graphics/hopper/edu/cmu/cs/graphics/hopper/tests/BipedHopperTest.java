@@ -387,7 +387,7 @@ public class BipedHopperTest extends TestbedTest {
 
     private void saveControlSequence() {
         String filename = "blah.csq";
-        ProblemSolutionEntry entry = new ProblemSolutionEntry(new ObstacleProblemDefinition(1,2), provider);
+        ProblemSolutionEntry entry = new ProblemSolutionEntry(new ObstacleProblemDefinition(1,2), provider.toDefinition());
         IOUtils.instance().saveProblemSolutionEntry(entry, "", filename);
         log.info("Saved control sequence to file: " + filename);
     }

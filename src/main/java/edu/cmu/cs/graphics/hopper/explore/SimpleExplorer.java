@@ -2,26 +2,32 @@ package edu.cmu.cs.graphics.hopper.explore;
 
 import edu.cmu.cs.graphics.hopper.control.Control;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
+import edu.cmu.cs.graphics.hopper.control.ControlProviderDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
+import net.sf.javaml.core.kdtree.KDTree;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /** A baseline explorer that doesn't do anything smart in terms of prioritizing
  * which examples to send to the user or which controls to test at each timestep. */
 public class SimpleExplorer<C extends Control> extends Explorer<C> {
+    private static final Logger log = LoggerFactory.getLogger(SimpleExplorer.class);
+
     //Control providers/sequences usable by this explorer
-    List<ControlProvider<C>> controlEnsemble;
-    int nextControlProviderIdx;
+    //Just a way of keeping track of which controls exist already in the ensemble
+    LinkedHashSet<ControlProviderDefinition<C>> controlEnsemble;
+    Iterator<ControlProviderDefinition<C>> nextControlProviderIter;
 
     @Override
     public void initExploration() {
-        controlEnsemble = new ArrayList<ControlProvider<C>>();
+        controlEnsemble = new LinkedHashSet<ControlProviderDefinition<C>>();
     }
 
     @Override
     protected void prepareForProblem(ProblemDefinition problemDef) {
-        nextControlProviderIdx = 0;
+        nextControlProviderIter = controlEnsemble.iterator();
     }
 
     @Override
@@ -32,12 +38,11 @@ public class SimpleExplorer<C extends Control> extends Explorer<C> {
     }
 
     @Override
-    protected ControlProvider<C> getNextControlSequence(ProblemDefinition p) {
+    protected ControlProviderDefinition<C> getNextControlSequence(ProblemDefinition p) {
         //Just return next sequence in the list, if available
-        ControlProvider<C> provider = null;
-        if (nextControlProviderIdx <= controlEnsemble.size() - 1) {
-            provider = controlEnsemble.get(nextControlProviderIdx);
-            nextControlProviderIdx++;
+        ControlProviderDefinition<C> provider = null;
+        if (nextControlProviderIter.hasNext()) {
+            provider = nextControlProviderIter.next();
         }
         return provider;
     }
@@ -51,8 +56,13 @@ public class SimpleExplorer<C extends Control> extends Explorer<C> {
     }
 
     @Override
-    protected void onChallengeSolutionGiven(ProblemDefinition challenge, ControlProvider<C> challengeSolution) {
+    protected void onChallengeSolutionGiven(ProblemDefinition challenge, ControlProviderDefinition<C> challengeSolution) {
         //Add the new solution to our ensemble (control vocabulary)
-        controlEnsemble.add(challengeSolution);
+        if (!controlEnsemble.contains(challengeSolution))
+            controlEnsemble.add(challengeSolution);
+        else {
+            log.info("Note: Declined to add a duplicate challenge solution to control ensemble.");
+        }
+
     }
 }

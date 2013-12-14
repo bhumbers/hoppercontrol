@@ -3,6 +3,7 @@ package edu.cmu.cs.graphics.hopper.oracle;
 import edu.cmu.cs.graphics.hopper.control.AvatarDefinition;
 import edu.cmu.cs.graphics.hopper.control.Control;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
+import edu.cmu.cs.graphics.hopper.control.ControlProviderDefinition;
 import edu.cmu.cs.graphics.hopper.eval.EvaluatorDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 
@@ -27,7 +28,7 @@ public class AssociativeOracle<C extends Control> extends ChallengeOracle<C> {
         k = -1;
     }
 
-    public void addSolutionEntry(ProblemDefinition problem, ControlProvider<C> solution) {
+    public void addSolutionEntry(ProblemDefinition problem, ControlProviderDefinition<C> solution) {
         double[] problemParams = problem.getParamsArray();
         if (k >= 0 && problemParams.length != k)  {
            log.error("Failed to add solution entry to oracle: Oracle accepts problem params of size " + k +
@@ -45,7 +46,7 @@ public class AssociativeOracle<C extends Control> extends ChallengeOracle<C> {
     }
 
     @Override
-    public ControlProvider<C> solveChallenge(ProblemDefinition problemDef, AvatarDefinition avatarDef, EvaluatorDefinition evalDef) {
+    public ControlProviderDefinition<C> solveChallenge(ProblemDefinition problemDef, AvatarDefinition avatarDef, EvaluatorDefinition evalDef) {
         if (solutionsByProblem != null) {
             double[] problemParams = problemDef.getParamsArray();
                 if (k >= 0 && problemParams.length != k)  {
@@ -54,7 +55,7 @@ public class AssociativeOracle<C extends Control> extends ChallengeOracle<C> {
                 return null;
             }
 
-            return (ControlProvider<C>)solutionsByProblem.search(problemParams);
+            return (ControlProviderDefinition<C>)solutionsByProblem.search(problemParams);
         }
         return null;
     }
