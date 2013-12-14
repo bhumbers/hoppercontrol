@@ -7,5 +7,7 @@ bin/
 target/
 *.log
 
+*.asv
+
 data
 exploration
