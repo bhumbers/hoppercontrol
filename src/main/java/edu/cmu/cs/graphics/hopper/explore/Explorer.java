@@ -165,16 +165,8 @@ public abstract class Explorer<C extends Control> {
                 }
 
                 //If configured to do so, save the evaluation result
-                if (evalsSaved) {
-                    int evalNum = numTests;
-                    EvalCacheKey key = new EvalCacheKey(problemDef, potentialSolution);
-                    int evalKeyHash = key.hashCode();
-                    String filename = String.format("%h", evalKeyHash) + ".ech";
-                    log.info("Saving eval to disk: " + filename);
-                    IOUtils.instance().saveEvalCacheEntry(
-                            new EvalCacheEntry(new EvalCacheKey(problemDef, potentialSolution),new EvalCacheValue(evalResult)),
-                            evalsSavePath, filename);
-                }
+                if (evalsSaved)
+                    saveEval(problemDef, potentialSolution, evalResult);
 
                 numTests++; numTestsRunForProblem++;
 
@@ -250,6 +242,11 @@ public abstract class Explorer<C extends Control> {
                 challengeSolFound = true;
                 markProblemSolved(challenge, challengeSolution);
                 onChallengeSolutionGiven(challenge, challengeSolution);
+
+                //If configured to do so, save the evaluation result (have to do this here
+                //so that oracle solutions are logged as well as normal evals)
+                if (evalsSaved)
+                    saveEval(challenge, challengeSolution, Evaluator.Status.SUCCESS);
                 break;
             }
         }
@@ -271,9 +268,11 @@ public abstract class Explorer<C extends Control> {
 
         if (solsSaved) {
             int solNum = solvedProblems.size();
-            String filename = String.format("%05d", solNum) + ".sol";
+            ProblemSolutionEntry entry = new ProblemSolutionEntry(problem, solution);
+            int solEntryHash = entry.hashCode();
+            String filename = String.format("%h", solEntryHash) + ".sol";
             log.info("Saving solution to disk: " + filename);
-            IOUtils.instance().saveProblemSolutionEntry(new ProblemSolutionEntry(problem, solution), solsSavePath, filename);
+            IOUtils.instance().saveProblemSolutionEntry(entry, solsSavePath, filename);
         }
 
         addLogEntry();
@@ -307,6 +306,17 @@ public abstract class Explorer<C extends Control> {
                 log.error("Error writing to log file: " + logSavePath);
             }
         }
+    }
+
+    protected void saveEval(ProblemDefinition problemDef, ControlProviderDefinition controlDef, Evaluator.Status result) {
+        int evalNum = numTests;
+        EvalCacheKey key = new EvalCacheKey(problemDef, controlDef);
+        int evalKeyHash = key.hashCode();
+        String filename = String.format("%h", evalKeyHash) + ".ech";
+        log.info("Saving eval to disk: " + filename);
+        IOUtils.instance().saveEvalCacheEntry(
+                new EvalCacheEntry(new EvalCacheKey(problemDef, controlDef),new EvalCacheValue(result)),
+                evalsSavePath, filename);
     }
 
     /**Sets up for a new exploration (called at start of explore())  */

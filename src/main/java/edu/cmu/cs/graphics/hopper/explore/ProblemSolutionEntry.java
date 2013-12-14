@@ -12,4 +12,24 @@ public final class ProblemSolutionEntry {
         this.problem = problem;
         this.solution = solution;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ProblemSolutionEntry that = (ProblemSolutionEntry) o;
+
+        if (!problem.equals(that.problem)) return false;
+        if (!solution.equals(that.solution)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = problem.hashCode();
+        result = 31 * result + solution.hashCode();
+        return result;
+    }
 }

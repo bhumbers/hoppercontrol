@@ -75,7 +75,7 @@ public class ExplorerMain {
 
         String explorationName = config.getString("explorationName");
         String explorationOutputPath = config.getString("explorationOutputPath");
-        String autoOracleSolsPath = config.getString("autoOracleSolsPath");
+        String[] autoOracleSolsPaths = config.getStringArray("autoOracleSolsPath");
         boolean saveSols = config.getBoolean("saveSolutions");
         boolean saveLog = config.getBoolean("saveExplorationLog");
         boolean verifyOracleSols = config.getBoolean("verifyOracleSolutions");
@@ -83,7 +83,7 @@ public class ExplorerMain {
         int maxTestsPerProblem = config.getInt("maxTestsPerProblem");
 
         boolean useEvalCache = config.getBoolean("useEvalCache");
-        String evalCachePath = config.getString("evalCachePath");
+        String[] evalCachePaths = config.getStringArray("evalCachePath");
 
         boolean useSmartControlOrdering = config.getBoolean("useSmartControlOrdering");
 
@@ -97,7 +97,10 @@ public class ExplorerMain {
         int terrainSeed = config.getInt("terrainSeed");
         int terrainLength = config.getInt("terrainLength");
         float terrainDeltaX = config.getFloat("terrainDeltaX");
-        float terrainMaxAmp = config.getFloat("terrainMaxAmp");
+        String[] terrainMaxAmpStrs = config.getStringArray("terrainMaxAmp");
+        float[] terrainMaxAmps = new float[terrainMaxAmpStrs.length];
+        for (int i = 0; i < terrainMaxAmps.length; i++)
+            terrainMaxAmps[i] = Float.parseFloat(terrainMaxAmpStrs[i]);
 
         log.info("Starting a control exploration named " + explorationName);
         long t0 = System.currentTimeMillis();
@@ -105,19 +108,22 @@ public class ExplorerMain {
         List<ProblemDefinition> problems = new ArrayList<ProblemDefinition>();
 
         //Terrain test
-        Random r = new Random();
-        r.setSeed(terrainSeed);
-        for (int i = 0; i < numProblems; i++) {
-            float y = 0.0f;
-            List<Float> verts = new ArrayList<Float>(terrainLength);
-            verts.add(0.0f);      //initial "ground" node
-            for (int j = 0; j < terrainLength; j++) {
-                y = terrainMaxAmp*(r.nextFloat());
-                if (y < 0)
-                    y = 0;
-                verts.add(y);
+        for (int ampIdx = 0; ampIdx < terrainMaxAmps.length; ampIdx++) {
+            float terrainMaxAmp = terrainMaxAmps[ampIdx];
+            Random r = new Random();
+            r.setSeed(terrainSeed);
+            for (int i = 0; i < numProblems; i++) {
+                float y = 0.0f;
+                List<Float> verts = new ArrayList<Float>(terrainLength);
+                verts.add(0.0f);      //initial "ground" node
+                for (int j = 0; j < terrainLength; j++) {
+                    y = terrainMaxAmp*(r.nextFloat());
+                    if (y < 0)
+                        y = 0;
+                    verts.add(y);
+                }
+                problems.add(new TerrainProblemDefinition(verts, terrainDeltaX));
             }
-            problems.add(new TerrainProblemDefinition(verts, terrainDeltaX));
         }
 
         //Test problem set
@@ -134,18 +140,23 @@ public class ExplorerMain {
         EvalCache evalCache = null;
         if (useEvalCache) {
             evalCache = new EvalCache();
-            List<EvalCacheEntry> evalCacheEntries = IOUtils.instance().loadAllEvalCacheEntriesInDir(evalCachePath);
-            for (EvalCacheEntry entry : evalCacheEntries)
-                evalCache.insert(entry.key, entry.value);
+            for (String evalCachePath : evalCachePaths) {
+                List<EvalCacheEntry> evalCacheEntries = IOUtils.instance().loadAllEvalCacheEntriesInDir(evalCachePath);
+                for (EvalCacheEntry entry : evalCacheEntries) {
+                    evalCache.insert(entry.key, entry.value);
+                }
+            }
         }
 
         List<ChallengeOracle<BipedHopperControl>> oracles = new ArrayList<ChallengeOracle<BipedHopperControl>>();
 
         //Automated oracle
         AssociativeOracle<BipedHopperControl> autoOracle = new AssociativeOracle<BipedHopperControl>();
-        List<ProblemSolutionEntry> solutionEntries = IOUtils.instance().loadAllProblemSolutionEntriesInDir(autoOracleSolsPath);
-        for (ProblemSolutionEntry solutionEntry : solutionEntries)
-            autoOracle.addSolutionEntry(solutionEntry.problem, solutionEntry.solution);
+        for (String autoOracleSolsPath : autoOracleSolsPaths) {
+            List<ProblemSolutionEntry> solutionEntries = IOUtils.instance().loadAllProblemSolutionEntriesInDir(autoOracleSolsPath);
+            for (ProblemSolutionEntry solutionEntry : solutionEntries)
+                autoOracle.addSolutionEntry(solutionEntry.problem, solutionEntry.solution);
+        }
         oracles.add(autoOracle);
 
         //User oracle
@@ -163,7 +174,7 @@ public class ExplorerMain {
 
         Explorer explorer;
         if (useSmartControlOrdering)
-            explorer = new SimpleExplorer();
+            explorer = new SmartControlExplorer();
         else
             explorer = new SimpleExplorer();
         explorer.setName(explorationName);

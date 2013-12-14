@@ -4,8 +4,8 @@ import edu.cmu.cs.graphics.hopper.control.ControlProviderDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 
 public final class EvalCacheKey {
-    final ProblemDefinition problemDef;
-    final ControlProviderDefinition controlDef;
+    public final ProblemDefinition problemDef;
+    public final ControlProviderDefinition controlDef;
 
     public EvalCacheKey(ProblemDefinition problemDef, ControlProviderDefinition controlDef) {
         this.problemDef = problemDef;
