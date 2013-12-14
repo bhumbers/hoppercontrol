@@ -7,12 +7,13 @@ data2 = csv2struct('BigRange_SCO_ExpLog.csv');
 % data4 = csv2struct('NaiveBaseline_TerrainMag4_EarlyExit2_SCO_ExpLog.csv');
 
 
+figure;
 for data = [data1, data2]
-    figure;
     [~, uniqueSolveLogIndices, ~] = unique(data.Num_Solved);
     plot(data.Num_Solved(uniqueSolveLogIndices), data.Num_Tests(uniqueSolveLogIndices));
+    hold all;
 %     xlim([-1, -1])
-    ylim([0 , 1000]);
+    ylim([0 , 3500]);
     
 %     figure;
 %     hist(diff(data.Num_Tests(uniqueSolveLogIndices)))
