@@ -9,16 +9,21 @@
 test1 = csv2struct('BigRange_TEST_FCE_ExpLog.csv'); %NOTE: This uses just the same 20-control ensemble as SCO
 test2 = csv2struct('BigRange_TEST_EE2_12345_ExpLog.csv');
 test3 = csv2struct('BigRange_TEST_SCO_ExpLog.csv');
-test4 = csv2struct('BigRange_TEST_EE2_12345_SCO_ExpLog.csv');
-test5 = csv2struct('BigRange_TEST_FCE_SCO_ExpLog.csv');
+test4 = csv2struct('BigRange_TEST_FCE_SCO_ExpLog.csv');
+test5 = csv2struct('BigRange_TEST_EE2_12345_SCO_ExpLog.csv');
 test6 = csv2struct('BigRange_TEST_EE2_12345_FCE_SCO_ExpLog.csv');
 
 optimal = struct('Num_Tests', (1:1400)', 'Num_Solved', (1:1400)', ...
                     'Num_Failed', zeros(1400,1), 'Num_Unsolved', zeros(1400,1), ...
                     'Num_Challenges', zeros(1400,1));
 
-solRangeOffset = 1; %full set
-% solRangeOffset = 801; %only hard problems (4, 5, and 6 terrain mags)
+restrictToHardProblems = true;
+
+if restrictToHardProblems
+    solRangeOffset = 801; %only hard problems (4, 5, and 6 terrain mags)
+else
+    solRangeOffset = 1; %full set
+end
 
 data_of_interest = [test1, test2,test3, test4, test5, test6, optimal];
 if (exist('num_tests_by_solve')), clear num_tests_by_solve; end
@@ -47,13 +52,19 @@ end
 
 headers = { 'Baseline; 20 Control Ensemble', ...
             'Baseline; 200 Control Ensemble', ...
-            'NN Lookup; 20 Control Ensemble; Sparse', ...
-            'NN Lookup; 20 Control Ensemble; Dense', ...
-            'NN Lookup; 200 Control Ensemble; Sparse', ...
-            'NN Lookup; 200 Control Ensemble; Dense', ...
-            'Optimal', ...
-          }
-csvwrite_with_headers('num_tests_all_runs_data.csv', num_tests_by_solve, headers);
+            'NN Lookup (Sparse); 20 Control Ensemble', ...
+            'NN Lookup (Sparse); 200 Control Ensemble', ...
+            'NN Lookup (Dense); 20 Control Ensemble', ...
+            'NN Lookup (Dense); 200 Control Ensemble', ...
+            'Best Possible Result', ...
+          };
+      
+if restrictToHardProblems
+    outputFileName = 'num_tests_hard_problems_data.csv';
+else
+    outputFileName = 'num_tests_all_runs_data.csv';
+end
+csvwrite_with_headers(outputFileName, num_tests_by_solve, headers);
 
 
 for data = data_of_interest 
