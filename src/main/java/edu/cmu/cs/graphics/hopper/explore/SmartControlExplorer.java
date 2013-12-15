@@ -4,18 +4,22 @@ import edu.cmu.cs.graphics.hopper.control.Control;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
 import edu.cmu.cs.graphics.hopper.control.ControlProviderDefinition;
 import edu.cmu.cs.graphics.hopper.io.IOUtils;
+import edu.cmu.cs.graphics.hopper.math.MathUtils;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 import net.sf.javaml.core.kdtree.KDTree;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 /** An explorer which intelligently selects which control sequence to test next */
 public class SmartControlExplorer<C extends Control> extends Explorer<C> {
     //Maps from problems to known solution sequences (ControlProvider)
-    KDTree controlsByProblem;
-    int numControlsByProblem;
+//    KDTree controlsByProblem;
+//    int numControlsByProblem;
+
+    //Map of control sequences, where each entry is a KD tree containing all the problems that
+    //the sequence is known to solve (in the tree, keys are problem param arrays, vals are ProblemDefinition objects)
+    LinkedHashMap<ControlProviderDefinition, KDTree> problemsByControlSolution;
+    int numTotalProblems = 0;
 
     //Ordered list of controls to attempt for current problem
     List<ControlProviderDefinition<C>> sequencesToTryForProblem;
@@ -41,15 +45,32 @@ public class SmartControlExplorer<C extends Control> extends Explorer<C> {
         nextControlSequenceIdx = 0;
         sequencesToTryForProblem.clear();
 
-        //Generate order to test controls based on similarity to given problem
-        double[] problemParams = problemDef.getParamsArray();
-        final int MAX_NEAREST_TO_RETURN = 50;
-        int nearestK = Math.min(numControlsByProblem, MAX_NEAREST_TO_RETURN); //KD tree seems to explode if this is too high (null pointer exception)
-        if (controlsByProblem != null) {
-            Object[] orderedControls = controlsByProblem.nearest(problemParams, nearestK);
-            for (Object orderedControl : orderedControls)
-                sequencesToTryForProblem.add((ControlProviderDefinition<C>)orderedControl);
+//        //Generate order to test controls based on similarity to given problem
+//        double[] problemParams = problemDef.getParamsArray();
+//        final int MAX_NEAREST_TO_RETURN = 50;
+//        int nearestK = Math.min(numControlsByProblem, MAX_NEAREST_TO_RETURN); //KD tree seems to explode if this is too high (null pointer exception)
+//        if (controlsByProblem != null) {
+//            Object[] orderedControls = controlsByProblem.nearest(problemParams, nearestK);
+//            for (Object orderedControl : orderedControls)
+//                sequencesToTryForProblem.add((ControlProviderDefinition<C>)orderedControl);
+//        }
+
+        //Generate order to test controls based on their most similar problem that they already solve
+        double[] newProblemParams = problemDef.getParamsArray();
+        int numControls = problemsByControlSolution.size();
+
+        Pair<ControlProviderDefinition, Double>[] controlsWithDistanceSqrdToProblem = new Pair[numControls];
+        int controlIdx = 0;
+        for (Map.Entry<ControlProviderDefinition, KDTree> entry : problemsByControlSolution.entrySet()) {
+            double[] nearestProbParams = (double[])entry.getValue().nearest(newProblemParams);
+            double deltaSqrd = MathUtils.deltaSqrd(newProblemParams, nearestProbParams);
+            controlsWithDistanceSqrdToProblem[controlIdx] = new Pair<ControlProviderDefinition, Double>(entry.getKey(), deltaSqrd);
+            controlIdx++;
         }
+
+        Arrays.sort(controlsWithDistanceSqrdToProblem, new SortOnDoubleComparator<ControlProviderDefinition>());
+        for (Pair<ControlProviderDefinition, Double> controlPair : controlsWithDistanceSqrdToProblem)
+            sequencesToTryForProblem.add(controlPair.first);
     }
 
     @Override
@@ -80,15 +101,46 @@ public class SmartControlExplorer<C extends Control> extends Explorer<C> {
 
     @Override
     protected void addToControlEnsemble(ProblemDefinition problem, ControlProviderDefinition<C> control) {
-        double[] problemParams = problem.getParamsArray();
-        if (controlsByProblem == null) {
-            int k = problemParams.length;
-            controlsByProblem = new KDTree(k);
-            numControlsByProblem = 0;
+        if (problemsByControlSolution == null) {
+            problemsByControlSolution = new LinkedHashMap<ControlProviderDefinition, KDTree>();
+            numTotalProblems = 0;
         }
 
-        //Add the solution to ensemble, indexed by problem
-        controlsByProblem.insert(problemParams, control);
-        numControlsByProblem++;
+        double[] problemParams = problem.getParamsArray();
+        int k = problemParams.length;
+
+//        if (controlsByProblem == null) {
+//            int k = problemParams.length;
+//            controlsByProblem = new KDTree(k);
+//            numControlsByProblem = 0;
+//        }
+//
+//        //Add the solution to ensemble, indexed by problem
+//        controlsByProblem.insert(problemParams, control);
+//        numControlsByProblem++;
+
+        //Add entry for this control if it doesn't yet exist
+        if (!problemsByControlSolution.containsKey(control))
+            problemsByControlSolution.put(control, new KDTree(k));
+
+        problemsByControlSolution.get(control).insert(problemParams, problemParams);
+        numTotalProblems++;
     }
+
+    private class Pair<F, S> {
+        public final F first;
+        public final S second;
+
+        public Pair(F first, S second) {
+            this.first = first;
+            this.second = second;
+        }
+    }
+
+    private class SortOnDoubleComparator<F> implements  Comparator<Pair<F, Double>> {
+        @Override
+        public int compare(Pair<F, Double> pair1, Pair<F, Double> pair2) {
+            return Double.compare(pair1.second, pair2.second);
+        }
+    };
 }

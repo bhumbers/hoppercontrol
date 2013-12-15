@@ -6,11 +6,12 @@
 % data4 = csv2struct('BigRange_CE_SCO_ExpLog.csv');
 % data5 = csv2struct('BigRange_FCE_SCO_ExpLog.csv');
 
-test1 = csv2struct('BigRange_TEST_ExpLog.csv');
-test2 = csv2struct('BigRange_TEST_SCO_ExpLog.csv');
-test3 = csv2struct('BigRange_TEST_FCE_SCO_ExpLog.csv');
+% test1 = csv2struct('BigRange_TEST_ExpLog.csv');
+test2 = csv2struct('BigRange_TEST_FCE_ExpLog.csv');
+test3 = csv2struct('BigRange_TEST_SCO_ExpLog.csv');
+test4 = csv2struct('BigRange_TEST_FCE_SCO_ExpLog.csv');
 
-data_of_interest = [test1, test2, test3];
+data_of_interest = [test2, test3, test4];
 
 figure;
 for data = data_of_interest
@@ -20,6 +21,8 @@ for data = data_of_interest
 %     xlim([-1, -1])
     ylim([0 , 3500]);
 end
+%Draw "best case" line
+line([0, 1500], [0, 1500]);
 
 for data = data_of_interest 
     [~, uniqueSolveLogIndices, ~] = unique(data.Num_Solved);
