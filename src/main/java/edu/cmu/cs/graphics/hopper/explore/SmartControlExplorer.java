@@ -25,6 +25,12 @@ public class SmartControlExplorer<C extends Control> extends Explorer<C> {
     List<ControlProviderDefinition<C>> sequencesToTryForProblem;
     int nextControlSequenceIdx;
 
+    public SmartControlExplorer() {
+        super();
+        problemsByControlSolution = new LinkedHashMap<ControlProviderDefinition, KDTree>();
+        numTotalProblems = 0;
+    }
+
     @Override
     public void loadEnsemble(String inputEnsemblePath) {
         //For now: load sol files, add corresponding controls to ensemble
@@ -101,11 +107,6 @@ public class SmartControlExplorer<C extends Control> extends Explorer<C> {
 
     @Override
     protected void addToControlEnsemble(ProblemDefinition problem, ControlProviderDefinition<C> control) {
-        if (problemsByControlSolution == null) {
-            problemsByControlSolution = new LinkedHashMap<ControlProviderDefinition, KDTree>();
-            numTotalProblems = 0;
-        }
-
         double[] problemParams = problem.getParamsArray();
         int k = problemParams.length;
 
