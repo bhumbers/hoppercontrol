@@ -3,6 +3,7 @@ package edu.cmu.cs.graphics.hopper.explore;
 import edu.cmu.cs.graphics.hopper.control.Control;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
 import edu.cmu.cs.graphics.hopper.control.ControlProviderDefinition;
+import edu.cmu.cs.graphics.hopper.io.IOUtils;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 import net.sf.javaml.core.kdtree.KDTree;
 import org.slf4j.Logger;
@@ -20,9 +21,21 @@ public class SimpleExplorer<C extends Control> extends Explorer<C> {
     LinkedHashSet<ControlProviderDefinition<C>> controlEnsemble;
     Iterator<ControlProviderDefinition<C>> nextControlProviderIter;
 
-    @Override
-    public void initExploration() {
+    public SimpleExplorer() {
         controlEnsemble = new LinkedHashSet<ControlProviderDefinition<C>>();
+    }
+
+    @Override
+    public void loadEnsemble(String inputEnsemblePath) {
+        //For now: load sol files, add corresponding controls to ensemble
+        List<ProblemSolutionEntry> entries = IOUtils.instance().loadAllProblemSolutionEntriesInDir(inputEnsemblePath);
+        for (ProblemSolutionEntry entry : entries)
+            addToControlEnsemble(entry.problem, entry.solution);
+    }
+
+    @Override
+    protected void initExploration() {
+        //
     }
 
     @Override
@@ -56,13 +69,14 @@ public class SimpleExplorer<C extends Control> extends Explorer<C> {
     }
 
     @Override
-    protected void onChallengeSolutionGiven(ProblemDefinition challenge, ControlProviderDefinition<C> challengeSolution) {
+    protected void addToControlEnsemble(ProblemDefinition problem, ControlProviderDefinition<C> control) {
         //Add the new solution to our ensemble (control vocabulary)
-        if (!controlEnsemble.contains(challengeSolution))
-            controlEnsemble.add(challengeSolution);
+        //Note that we don't particular care about the problem it solved in this simple explorer
+
+        if (!controlEnsemble.contains(control))
+            controlEnsemble.add(control);
         else {
             log.info("Note: Declined to add a duplicate challenge solution to control ensemble.");
         }
-
     }
 }

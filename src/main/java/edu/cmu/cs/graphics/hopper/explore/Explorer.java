@@ -2,7 +2,6 @@ package edu.cmu.cs.graphics.hopper.explore;
 
 import edu.cmu.cs.graphics.hopper.control.AvatarDefinition;
 import edu.cmu.cs.graphics.hopper.control.Control;
-import edu.cmu.cs.graphics.hopper.control.ControlProvider;
 import edu.cmu.cs.graphics.hopper.control.ControlProviderDefinition;
 import edu.cmu.cs.graphics.hopper.eval.*;
 import edu.cmu.cs.graphics.hopper.io.IOUtils;
@@ -50,6 +49,9 @@ public abstract class Explorer<C extends Control> {
     boolean evalsSaved = false;
     String evalsSavePath = "";
 
+    boolean ctrlEnsembleSaved = false;
+    String ctrlEnsembleSavePath = "";
+
     //If true, solutions from oracle are verified for correctness; if incorrect, sampled simulation is forwarded to the oracle for review
     boolean verifyOracleSols = false;
 
@@ -78,12 +80,20 @@ public abstract class Explorer<C extends Control> {
     public void setLogSavePath(String path) { logSavePath = path; }
     public void setEvalsSaved(boolean val) {evalsSaved = val;}
     public void setEvalsSavePath(String path) { evalsSavePath = path; }
+    public void setControlEnsembleSaved(boolean val) {ctrlEnsembleSaved = val;}
+    public void setControlEnsembleSavePath(String path) { ctrlEnsembleSavePath = path; }
 
     public void setMaxTestsPerProblem(int val) {maxTestsPerProblem = val;}
 
     public void setVerifyOracleSols(boolean val) { verifyOracleSols = val;}
 
     public void setEvalCache(EvalCache val) {evalCache = val;}
+
+    /**Loads a pre-existing control ensemble for this explorer from data at given path (folder)
+     * Note that, generally, different explorer subtypes will use different ensemble data formats.
+     * so an ensemble from one type can't be used by another type
+     * TODO: Make ensembles object oriented. */
+    public abstract void loadEnsemble(String inputEnsemblePath);
 
     /** Runs exploration in a continuous loop until all problems are solved */
     public void explore(List<ProblemDefinition> problems, AvatarDefinition avatarDef, EvaluatorDefinition evalDef, List<ChallengeOracle<C>> oracles) {
@@ -241,7 +251,9 @@ public abstract class Explorer<C extends Control> {
                 log.info("Oracle #" + oracleIdx + " successfully solved challenge #" + numOracleChallenges + " ; marking as solved");
                 challengeSolFound = true;
                 markProblemSolved(challenge, challengeSolution);
-                onChallengeSolutionGiven(challenge, challengeSolution);
+                addToControlEnsemble(challenge, challengeSolution);
+                if (ctrlEnsembleSaved)
+                    saveControlEnsembleEntry(challenge, challengeSolution);
 
                 //If configured to do so, save the evaluation result (have to do this here
                 //so that oracle solutions are logged as well as normal evals)
@@ -319,6 +331,17 @@ public abstract class Explorer<C extends Control> {
                 evalsSavePath, filename);
     }
 
+    protected void saveControlEnsembleEntry(ProblemDefinition problem, ControlProviderDefinition<C> control) {
+        //HACK FOR 869 PROJECT: .sol files contain all the necessary info for ensembles, for now, so just save as sol file
+        //TODO: More modular & smarter ensemble saving that varies by explorer type
+
+        ProblemSolutionEntry ensembleEntry = new ProblemSolutionEntry(problem, control);
+        int ensembleEntryHash = ensembleEntry.hashCode();
+        String filename = String.format("%h", ensembleEntryHash) + ".sol";
+        log.info("Saving ensemble entry to disk: " + filename);
+        IOUtils.instance().saveProblemSolutionEntry(ensembleEntry, ctrlEnsembleSavePath, filename);
+    }
+
     /**Sets up for a new exploration (called at start of explore())  */
     protected abstract void initExploration();
 
@@ -336,6 +359,6 @@ public abstract class Explorer<C extends Control> {
      * if this explorer currently does not wish to send a problem to the oracle */
     protected abstract ProblemDefinition getNextChallengeProblem();
 
-    /** Runs any additional logic (aside from marking a problem solved) for when a new challenge solution is provided */
-    protected void onChallengeSolutionGiven(ProblemDefinition challenge, ControlProviderDefinition<C> challengeSolution) {}
+    /** Adds given control w/ solution to this explorer's control ensemble (specific behavior depends on subtype) */
+    protected abstract void addToControlEnsemble(ProblemDefinition problem, ControlProviderDefinition<C> control);
 }

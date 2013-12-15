@@ -3,6 +3,7 @@ package edu.cmu.cs.graphics.hopper.explore;
 import edu.cmu.cs.graphics.hopper.control.Control;
 import edu.cmu.cs.graphics.hopper.control.ControlProvider;
 import edu.cmu.cs.graphics.hopper.control.ControlProviderDefinition;
+import edu.cmu.cs.graphics.hopper.io.IOUtils;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 import net.sf.javaml.core.kdtree.KDTree;
 
@@ -21,6 +22,14 @@ public class SmartControlExplorer<C extends Control> extends Explorer<C> {
     int nextControlSequenceIdx;
 
     @Override
+    public void loadEnsemble(String inputEnsemblePath) {
+        //For now: load sol files, add corresponding controls to ensemble
+        List<ProblemSolutionEntry> entries = IOUtils.instance().loadAllProblemSolutionEntriesInDir(inputEnsemblePath);
+        for (ProblemSolutionEntry entry : entries)
+            addToControlEnsemble(entry.problem, entry.solution);
+    }
+
+    @Override
     public void initExploration() {
     }
 
@@ -34,8 +43,10 @@ public class SmartControlExplorer<C extends Control> extends Explorer<C> {
 
         //Generate order to test controls based on similarity to given problem
         double[] problemParams = problemDef.getParamsArray();
+        final int MAX_NEAREST_TO_RETURN = 50;
+        int nearestK = Math.min(numControlsByProblem, MAX_NEAREST_TO_RETURN); //KD tree seems to explode if this is too high (null pointer exception)
         if (controlsByProblem != null) {
-            Object[] orderedControls = controlsByProblem.nearest(problemParams, numControlsByProblem);
+            Object[] orderedControls = controlsByProblem.nearest(problemParams, nearestK);
             for (Object orderedControl : orderedControls)
                 sequencesToTryForProblem.add((ControlProviderDefinition<C>)orderedControl);
         }
@@ -68,8 +79,8 @@ public class SmartControlExplorer<C extends Control> extends Explorer<C> {
     }
 
     @Override
-    protected void onChallengeSolutionGiven(ProblemDefinition challenge, ControlProviderDefinition<C> challengeSolution) {
-        double[] problemParams = challenge.getParamsArray();
+    protected void addToControlEnsemble(ProblemDefinition problem, ControlProviderDefinition<C> control) {
+        double[] problemParams = problem.getParamsArray();
         if (controlsByProblem == null) {
             int k = problemParams.length;
             controlsByProblem = new KDTree(k);
@@ -77,7 +88,7 @@ public class SmartControlExplorer<C extends Control> extends Explorer<C> {
         }
 
         //Add the solution to ensemble, indexed by problem
-        controlsByProblem.insert(problemParams, challengeSolution);
+        controlsByProblem.insert(problemParams, control);
         numControlsByProblem++;
     }
 }

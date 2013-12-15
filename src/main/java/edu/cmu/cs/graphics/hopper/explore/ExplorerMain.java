@@ -76,10 +76,13 @@ public class ExplorerMain {
         String explorationName = config.getString("explorationName");
         String explorationOutputPath = config.getString("explorationOutputPath");
         String[] autoOracleSolsPaths = config.getStringArray("autoOracleSolsPath");
+        String[] inputCtrlEnsemblePaths = config.getStringArray("inputCtrlEnsemblePath");
+
         boolean saveSols = config.getBoolean("saveSolutions");
         boolean saveLog = config.getBoolean("saveExplorationLog");
         boolean verifyOracleSols = config.getBoolean("verifyOracleSolutions");
         boolean saveEvals = config.getBoolean("saveEvals");
+        boolean saveCtrlEnsemble = config.getBoolean("saveCtrlEnsemble");
         int maxTestsPerProblem = config.getInt("maxTestsPerProblem");
 
         boolean useEvalCache = config.getBoolean("useEvalCache");
@@ -92,6 +95,7 @@ public class ExplorerMain {
         String saveSolsDir = explorationOutputPath + explorationName + "/sols/";
         String saveLogDir = explorationOutputPath + explorationName + "/";
         String saveEvalsDir = explorationOutputPath + explorationName + "/evals/";
+        String saveCtrlEnsembleDir = explorationOutputPath + explorationName + "/ensemble/";
 
         int numProblems = config.getInt("numProblems");
         int terrainSeed = config.getInt("terrainSeed");
@@ -177,6 +181,11 @@ public class ExplorerMain {
             explorer = new SmartControlExplorer();
         else
             explorer = new SimpleExplorer();
+
+        //Pre-existing ensemble inputs
+        for (String inputCtrlEnsemblePath : inputCtrlEnsemblePaths)
+            explorer.loadEnsemble(inputCtrlEnsemblePath);
+
         explorer.setName(explorationName);
         explorer.setSolutionsSaved(saveSols);
         explorer.setSolutionsSavePath(saveSolsDir);
@@ -184,6 +193,8 @@ public class ExplorerMain {
         explorer.setLogSavePath(saveLogDir);
         explorer.setEvalsSaved(saveEvals);
         explorer.setEvalsSavePath(saveEvalsDir);
+        explorer.setControlEnsembleSaved(saveCtrlEnsemble);
+        explorer.setControlEnsembleSavePath(saveCtrlEnsembleDir);
         explorer.setVerifyOracleSols(verifyOracleSols);
         explorer.setMaxTestsPerProblem(maxTestsPerProblem);
         if (evalCache != null) explorer.setEvalCache(evalCache);
