@@ -53,6 +53,7 @@ public class ProblemInstanceTest extends TestbedTest {
     ProblemInstance nextProblem;
 
     boolean m_followAvatar;
+    boolean m_drawAvatarDebugInfo;
 
     public ProblemInstanceTest() {
         super();
@@ -60,6 +61,9 @@ public class ProblemInstanceTest extends TestbedTest {
         xstream.alias("CtrlProvider", ControlProvider.class);
         xstream.alias("BipedCtrl", BipedHopperControl.class);
         xstream.omitField(ControlProvider.class, "currControlIdx");
+
+        m_followAvatar = true;
+        m_drawAvatarDebugInfo = true;
     }
 
     public synchronized void setProblem(ProblemInstance problem) {
@@ -151,7 +155,6 @@ public class ProblemInstanceTest extends TestbedTest {
         if (argDeserialized)
             return;
 
-        m_followAvatar = true;
     }
 
     @Override
@@ -272,22 +275,32 @@ public class ProblemInstanceTest extends TestbedTest {
                     b.getLinearVelocity().addLocal(-VEL_INCREMENT_X, 0);
                 }
                 break;
-            //Add negative rot vel to chassis
-            case 'x':
-                for (Body b : bodies)  {
-                    b.setAngularVelocity(b.getAngularVelocity() - ANG_VEL_INCREMENT);
-                }
-                break;
-            //Add positive rot vel to chassis
-            case 'n':
-                for (Body b : bodies)  {
-                    b.setAngularVelocity(b.getAngularVelocity() + ANG_VEL_INCREMENT);
-                }
-                break;
+//            //Add negative rot vel to chassis
+//            case 'x':
+//                for (Body b : bodies)  {
+//                    b.setAngularVelocity(b.getAngularVelocity() - ANG_VEL_INCREMENT);
+//                }
+//                break;
+//            //Add positive rot vel to chassis
+//            case 'n':
+//                for (Body b : bodies)  {
+//                    b.setAngularVelocity(b.getAngularVelocity() + ANG_VEL_INCREMENT);
+//                }
+//                break;
 
             //Toggle avatar-following for camera
             case 'z':
                 m_followAvatar = !m_followAvatar;
+                break;
+
+            //Toggle avatar debug info drawing
+            case 'x':
+                m_drawAvatarDebugInfo = !m_drawAvatarDebugInfo;
+                break;
+
+            //Recording setup
+            case 'g':
+
                 break;
 
             //Pause/play
@@ -378,13 +391,17 @@ public class ProblemInstanceTest extends TestbedTest {
 
             List<String> debugTextLines = new ArrayList<String>();
             List<Color3f> debugTextColors = new ArrayList<Color3f>();
-            problem.getAvatar().appendDebugTextLines(debugTextLines, debugTextColors);
-            addTextLines(debugTextLines, debugTextColors);
-            addTextLine("");
-            debugTextLines.clear(); debugTextColors.clear();
-            problem.getEvaluator().appendDebugTextLines(debugTextLines, debugTextColors);
-            addTextLines(debugTextLines, debugTextColors);
-            addTextLine("");
+            if (problem != null) {
+                if (problem.getAvatar() != null)
+                    problem.getAvatar().appendDebugTextLines(debugTextLines, debugTextColors);
+                addTextLines(debugTextLines, debugTextColors);
+                addTextLine("");
+                debugTextLines.clear(); debugTextColors.clear();
+                if (problem.getEvaluator() != null)
+                    problem.getEvaluator().appendDebugTextLines(debugTextLines, debugTextColors);
+                addTextLines(debugTextLines, debugTextColors);
+                addTextLine("");
+            }
 
             Evaluator.Status evalStatus = problem.getStatus();
             Color3f evalColor = new Color3f();
@@ -398,9 +415,11 @@ public class ProblemInstanceTest extends TestbedTest {
             addTextLine("Sample replay: " + worldSampleIdx + "/" + problem.getNumWorldSamples());
 
             DebugDraw dd = getModel().getDebugDraw();
-            if (problem.getAvatar() != null) {
-                Avatar avatar = problem.getAvatar();
-                avatar.drawDebugInfo(dd);
+            if (m_drawAvatarDebugInfo) {
+                if (problem.getAvatar() != null) {
+                    Avatar avatar = problem.getAvatar();
+                    avatar.drawDebugInfo(dd);
+                }
             }
         }
         //Otherwise, indicate our waiting status
