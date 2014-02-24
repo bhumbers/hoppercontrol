@@ -410,7 +410,7 @@ public class ProblemInstanceTest extends TestbedTest {
                 case FAILURE: evalColor.set(1,0.5f,0.5f); break;
                 case RUNNING: evalColor.set(1,1,1); break;
             }
-            addTextLine("Evaluation status: " + evalStatus.toString(), evalColor);
+            addTextLine("Evaluation status: " + evalStatus.toString());//, evalColor);
 
             addTextLine("Sample replay: " + worldSampleIdx + "/" + problem.getNumWorldSamples());
 
@@ -431,7 +431,7 @@ public class ProblemInstanceTest extends TestbedTest {
 
     protected void addTextLines(List<String> argTextLines, List<Color3f> argColors) {
         for (int i = 0; i < argTextLines.size(); i++)
-            addTextLine(argTextLines.get(i), argColors.get(i));
+            addTextLine(argTextLines.get(i));//, argColors.get(i));
     }
 
     @Override

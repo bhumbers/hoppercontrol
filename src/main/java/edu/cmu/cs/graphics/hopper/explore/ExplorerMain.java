@@ -8,10 +8,11 @@ import edu.cmu.cs.graphics.hopper.eval.EvalCache;
 import edu.cmu.cs.graphics.hopper.eval.EvalCacheEntry;
 import edu.cmu.cs.graphics.hopper.eval.EvaluatorDefinition;
 import edu.cmu.cs.graphics.hopper.io.IOUtils;
+import edu.cmu.cs.graphics.hopper.net.HopperPlaySnap;
+import edu.cmu.cs.graphics.hopper.net.ServerInterface;
 import edu.cmu.cs.graphics.hopper.oracle.AssociativeOracle;
 import edu.cmu.cs.graphics.hopper.oracle.ChallengeOracle;
 import edu.cmu.cs.graphics.hopper.oracle.UserOracle;
-import edu.cmu.cs.graphics.hopper.problems.ObstacleProblemDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 import edu.cmu.cs.graphics.hopper.problems.TerrainProblemDefinition;
 import org.apache.commons.cli.*;
@@ -19,17 +20,10 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.xml.DOMConfigurator;
-import org.box2d.proto.Box2D;
-import org.jbox2d.common.Vec2;
-import org.jbox2d.dynamics.World;
-import org.jbox2d.serialization.pb.PbDeserializer;
-import org.jbox2d.serialization.pb.PbSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -198,6 +192,16 @@ public class ExplorerMain {
         explorer.setVerifyOracleSols(verifyOracleSols);
         explorer.setMaxTestsPerProblem(maxTestsPerProblem);
         if (evalCache != null) explorer.setEvalCache(evalCache);
+
+        //Net logging test
+        ServerInterface server = new ServerInterface("gs13099.sp.cs.cmu.edu", 8080);
+        explorer.setServerInterface(server);
+        //TEST
+        HopperPlaySnap snap = new HopperPlaySnap();
+        snap.user = "bhumbers";
+        snap.config = new double[]{1, 2, 3, 4, 5};
+        snap.controls = new float[][]{{42, 6 ,7}, {25, 5, 5}};
+        server.sendPlaySnap(snap);
 
         explorer.explore(problems, avatarDef, evalDef, oracles);
 

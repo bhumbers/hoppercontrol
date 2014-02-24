@@ -5,6 +5,8 @@ import edu.cmu.cs.graphics.hopper.control.Control;
 import edu.cmu.cs.graphics.hopper.control.ControlProviderDefinition;
 import edu.cmu.cs.graphics.hopper.eval.*;
 import edu.cmu.cs.graphics.hopper.io.IOUtils;
+import edu.cmu.cs.graphics.hopper.net.HopperPlaySnap;
+import edu.cmu.cs.graphics.hopper.net.ServerInterface;
 import edu.cmu.cs.graphics.hopper.oracle.ChallengeOracle;
 import edu.cmu.cs.graphics.hopper.problems.ProblemDefinition;
 import edu.cmu.cs.graphics.hopper.problems.ProblemInstance;
@@ -22,6 +24,8 @@ public abstract class Explorer<C extends Control> {
 
     protected ExplorerLog expLog;
     protected EvalCache evalCache = null;
+
+    protected ServerInterface server = null;
 
     protected int numTests;
     protected int numOracleChallenges;
@@ -88,6 +92,8 @@ public abstract class Explorer<C extends Control> {
     public void setVerifyOracleSols(boolean val) { verifyOracleSols = val;}
 
     public void setEvalCache(EvalCache val) {evalCache = val;}
+
+    public void setServerInterface(ServerInterface val) {this.server = val;}
 
     /**Loads a pre-existing control ensemble for this explorer from data at given path (folder)
      * Note that, generally, different explorer subtypes will use different ensemble data formats.
@@ -285,6 +291,19 @@ public abstract class Explorer<C extends Control> {
             String filename = String.format("%h", solEntryHash) + ".sol";
             log.info("Saving solution to disk: " + filename);
             IOUtils.instance().saveProblemSolutionEntry(entry, solsSavePath, filename);
+        }
+
+        //SERVER TESTING -bh, 2.23.2014
+        if (server != null) {
+            HopperPlaySnap snap = new HopperPlaySnap();
+            snap.user = "bhumbers";
+            snap.config = problem.getParamsArray();
+            int numControls = solution.controls.size();
+            int numParamsPerControl = (numControls > 0) ? solution.controls.get(0).toNumericArray().length : 0;
+            snap.controls = new float[numControls][numParamsPerControl];
+            for (int i = 0; i < numControls; i++)
+                snap.controls[i] = solution.controls.get(i).toNumericArray();
+            server.sendPlaySnap(snap);
         }
 
         addLogEntry();
