@@ -38,6 +38,9 @@ public abstract class Avatar<C extends Control> {
     /**Applies any update logic (eg: control torques) for this avatar for a simulation timestep delta (in seconds) */
     public abstract void update(float dt);
 
+    /** Returns a deep copy of the current state of this avatar as a POJO, suitable for serializing to JSON */
+    public abstract Object getState();
+
     /** Runs any responsive logic for this avatar when a contact occurs during simulation */
     public void onBeginContact(Contact contact) {}
     public void onEndContact(Contact contact) {}

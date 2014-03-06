@@ -41,6 +41,12 @@ public final class ObstacleProblemDefinition extends ProblemDefinition {
     }
 
     @Override
+    public Object getState() {
+        //TODO
+        return null;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;

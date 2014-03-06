@@ -94,7 +94,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
     protected Body m_knee[];
     protected Body m_foot[];
     protected List<Body> m_bodies;
-    protected List<? extends Joint> m_joints;
+    protected List<Joint> m_joints;
 
     protected ControlProvider<BipedHopperControl> m_controlProvider;
 
@@ -268,6 +268,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
     //            jd.enableLimit = true;
     //            jd.lowerAngle = jd.upperAngle = 0.0f;
                 m_hipJoint[i] = (RevoluteJoint) world.createJoint(jd);
+                m_joints.add(m_hipJoint[i]);
             }
 
             //Linear upper leg thrust
@@ -280,6 +281,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
                     jd.enableMotor = true;
                     m_thrustJoint[i] = (PrismaticJoint) world.createJoint(jd);
                     m_initThrustJointLength[i] = m_thrustJoint[i].getBodyB().getPosition().sub(m_thrustJoint[i].getBodyA().getPosition()).length();
+                    m_joints.add(m_thrustJoint[i]);
                 }
             }
 
@@ -299,6 +301,7 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
                     m_springJoint[i] = (PrismaticJoint) world.createJoint(jd);
                     m_initSpringJointLength[i] = m_springJoint[i].getBodyB().getPosition().sub(m_springJoint[i].getBodyA().getPosition()).length();
                     m_targetHopSpringLength[i] = m_initSpringJointLength[i];
+                    m_joints.add(m_springJoint[i]);
                 }
             }
         }
@@ -604,6 +607,37 @@ public class BipedHopper extends Avatar<BipedHopperControl> {
         //Compare current velocity to target
         final float lineEps = -0.1f;
         dd.drawSegment(controlP.add(new Vec2(0,lineEps)), controlP.add(new Vec2(getMainBody().getLinearVelocity().x, lineEps)), new Color3f(1,1,0));
+    }
+
+    @Override
+    public Object getState() {
+        BipedHopperState s = new BipedHopperState();
+        s.x = this.getMainBody().getPosition();
+        s.xdot = this.getMainBody().getLinearVelocity();
+
+        s.theta = this.getMainBody().getAngle();
+        s.thetadot = this.getMainBody().getAngularVelocity();
+
+        s.joints = new float[this.getJoints().size()];
+        s.jointVels = new float[this.getJoints().size()];
+        for (int i = 0; i < this.getJoints().size(); i++) {
+            Joint joint = this.getJoints().get(i);
+            if (joint instanceof RevoluteJoint) {
+                s.joints[i]  = ((RevoluteJoint)joint).getJointAngle();
+                s.jointVels[i] = ((RevoluteJoint)joint).getJointSpeed();
+            }
+            else if (joint instanceof PrismaticJoint) {
+                s.joints[i] = ((PrismaticJoint)joint).getJointTranslation();
+                s.jointVels[i] = ((PrismaticJoint)joint).getJointSpeed();
+            }
+            else {
+               log.error("WARNING: Biped hopper state creation is skipping over a joint that was neither prismatic nor revolute");
+            }
+        }
+
+        s.controlState = this.getControlState();
+
+        return s;
     }
 
 }

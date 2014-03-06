@@ -10,6 +10,7 @@ import edu.cmu.cs.graphics.hopper.eval.EvaluatorDefinition;
 import edu.cmu.cs.graphics.hopper.io.IOUtils;
 import edu.cmu.cs.graphics.hopper.net.HopperPlaySnap;
 import edu.cmu.cs.graphics.hopper.net.ServerInterface;
+import edu.cmu.cs.graphics.hopper.net.SnapServerInterface;
 import edu.cmu.cs.graphics.hopper.oracle.AssociativeOracle;
 import edu.cmu.cs.graphics.hopper.oracle.ChallengeOracle;
 import edu.cmu.cs.graphics.hopper.oracle.UserOracle;
@@ -194,14 +195,14 @@ public class ExplorerMain {
         if (evalCache != null) explorer.setEvalCache(evalCache);
 
         //Net logging test
-        ServerInterface server = new ServerInterface("gs13099.sp.cs.cmu.edu", 8080);
+        SnapServerInterface server = new SnapServerInterface("gs13099.sp.cs.cmu.edu", 8080);
         explorer.setServerInterface(server);
-        //TEST
-        HopperPlaySnap snap = new HopperPlaySnap();
-        snap.user = "bhumbers";
-        snap.config = new double[]{1, 2, 3, 4, 5};
-        snap.controls = new float[][]{{42, 6 ,7}, {25, 5, 5}};
-        server.sendPlaySnap(snap);
+//        //TEST
+//        HopperPlaySnap snap = new HopperPlaySnap();
+//        snap.user = "bhumbers";
+//        snap.config = new double[]{1, 2, 3, 4, 5};
+//        snap.controls = new float[][]{{42, 6 ,7}, {25, 5, 5}};
+//        server.sendPlaySnap(snap);
 
         explorer.explore(problems, avatarDef, evalDef, oracles);
 

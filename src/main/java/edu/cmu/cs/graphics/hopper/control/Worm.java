@@ -4,6 +4,7 @@ import org.jbox2d.collision.shapes.PolygonShape;
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.joints.Joint;
+import org.jbox2d.dynamics.joints.PrismaticJoint;
 import org.jbox2d.dynamics.joints.RevoluteJoint;
 import org.jbox2d.dynamics.joints.RevoluteJointDef;
 import org.slf4j.Logger;
@@ -124,5 +125,33 @@ public class Worm extends Avatar<WormControl> {
         }
 
         timeSinceControlStep += dt;
+    }
+
+    @Override
+    public Object getState() {
+        WormState s = new WormState();
+        s.x = this.getMainBody().getPosition();
+        s.xdot = this.getMainBody().getLinearVelocity();
+
+        s.theta = this.getMainBody().getAngle();
+        s.thetadot = this.getMainBody().getAngularVelocity();
+
+        s.joints = new float[this.getJoints().size()];
+        for (int i = 0; i < this.getJoints().size(); i++) {
+            Joint joint = this.getJoints().get(i);
+            if (joint instanceof RevoluteJoint) {
+                s.joints[i] = ((RevoluteJoint)joint).getJointAngle();
+                s.jointVels[i] = ((RevoluteJoint)joint).getJointSpeed();
+            }
+            else if (joint instanceof PrismaticJoint) {
+                s.joints[i] = ((PrismaticJoint)joint).getJointTranslation();
+                s.jointVels[i] = ((PrismaticJoint)joint).getJointSpeed();
+            }
+            else {
+                log.error("WARNING: State creation is skipping over a joint that was neither prismatic nor revolute");
+            }
+        }
+
+        return s;
     }
 }

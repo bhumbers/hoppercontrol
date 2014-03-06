@@ -70,6 +70,25 @@ public final class TerrainProblemDefinition extends ProblemDefinition {
     }
 
     @Override
+    public Object getState() {
+        TerrainProblemState s = new TerrainProblemState();
+
+        s.width = this.heights.size();
+        s.height = 1; //this is just a 2D problem, hence just a single terrain row
+        s.heights = new double[s.width*s.height];
+        s.peakXDeltas = new double[s.width*s.height];
+
+        int i = 0;
+        for (Float height : heights)
+            s.heights[i++] = height;
+        i = 0;
+        for (Float peakXDelta : peakXDeltas)
+            s.peakXDeltas[i++] = peakXDelta;
+
+        return s;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
@@ -88,4 +107,11 @@ public final class TerrainProblemDefinition extends ProblemDefinition {
         result = 31 * result + peakXDeltas.hashCode();
         return result;
     }
+}
+
+class TerrainProblemState {
+    int width;
+    int height;
+    double[] heights;
+    double[] peakXDeltas;
 }

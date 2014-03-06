@@ -14,4 +14,7 @@ public abstract class ProblemDefinition {
     /** Returns a numeric array containing unique parameters for this problem.
      * The length of the returned array should be the same for all problems of a given type. */
     public abstract double[] getParamsArray();
+
+    /** Returns a deep copy of the current state of this avatar as a POJO, suitable for serializing to JSON */
+    public abstract Object getState();
  }
